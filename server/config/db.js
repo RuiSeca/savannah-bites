@@ -1,17 +1,19 @@
 const mongoose = require('mongoose');
-
-// Hardcoded MongoDB URI
-const uri = "mongodb+srv://rvcorporation23:9bjCM9XqHvtp3dGS@cluster0.eyzf9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"; 
+require('dotenv').config();
 
 const connectToDatabase = async () => {
   try {
-    console.log('MongoDB URI:', uri); // Debugging line to check if the URI is loaded
+    const uri = process.env.MONGODB_URI;
+    console.log('Attempting to connect to MongoDB...'); // Less verbose logging
 
-    await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+    await mongoose.connect(uri, { 
+      useNewUrlParser: true, 
+      useUnifiedTopology: true 
+    });
     console.log('MongoDB connected successfully');
   } catch (error) {
-    console.error('Failed to connect to MongoDB:', error.message); // Provide more context
-    throw error; // Rethrow the error to be caught in server.js
+    console.error('Failed to connect to MongoDB:', error.message);
+    throw error;
   }
 };
 
