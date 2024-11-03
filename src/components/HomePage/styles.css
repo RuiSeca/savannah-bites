@@ -1,13 +1,13 @@
 :root {
-  --primary-color: #E57A44;
-  --secondary-color: #C64F1D;
-  --accent-color: #FFA726;
-  --bg-color: #FFF5E1;
+  --primary-color: #e57a44;
+  --secondary-color: #c64f1d;
+  --accent-color: #ffa726;
+  --bg-color: #fff5e1;
   --text-color: #333;
 }
 
 .home-page {
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
   min-height: 100vh;
@@ -16,20 +16,12 @@
 }
 
 .header {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  color: white;
+  background: linear-gradient(135deg, #e57a44, #c64f1d);
   text-align: center;
-  padding: 1.5rem 1rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.header-content h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.8rem;
-  margin: 0;
-  color: #f2efe8;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 2rem;
+  color: white;
+  padding: 2rem;
+  border-radius: 0.75rem 0.75rem 0 0;
 }
 
 .tagline {
@@ -53,10 +45,18 @@ main {
 }
 
 .hero-text h1 {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-size: 40rem;
   color: var(--secondary-color);
   margin: 0;
+}
+
+.hero-text p {
+  margin-bottom: 2rem;
+  text-align: justify;
+  font-size: 16px;
+  margin-left: 10px;
+  margin-right: 10px;
 }
 
 .hero-text {
@@ -65,9 +65,10 @@ main {
 }
 
 .hero-text h2 {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-size: 2rem;
   color: var(--secondary-color);
+  margin-left: 10px;
 }
 
 .hero-text p {
@@ -97,7 +98,7 @@ main {
 }
 
 .section-title {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-size: 2rem;
   color: var(--secondary-color);
   margin-top: 8rem;
@@ -169,7 +170,9 @@ main {
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .dish-card img {
@@ -184,7 +187,7 @@ main {
 
 .dish-info h3 {
   color: var(--secondary-color);
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
 }
 
 .price {
@@ -211,7 +214,9 @@ main {
   border: none;
   border-radius: 20px;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.1s ease;
+  transition:
+    background-color 0.3s ease,
+    transform 0.1s ease;
   font-weight: 600;
   align-items: center; /* Vertically centers button content */
   justify-content: center; /* Horizontally centers button content */
@@ -230,7 +235,9 @@ main {
   border: none;
   border-radius: 20px;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.1s ease;
+  transition:
+    background-color 0.3s ease,
+    transform 0.1s ease;
   font-weight: 600;
   align-items: center; /* Vertically centers button content */
   justify-content: center; /* Horizontally centers button content */
@@ -244,25 +251,25 @@ main {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .button-container {
-      gap: 1rem; /* Slightly reduced gap for mobile */
+    gap: 1rem; /* Slightly reduced gap for mobile */
   }
 
   .btn-home-menu,
   .btn-home-reservation {
-      padding: 0.5rem 1rem; /* Slightly smaller padding on mobile if needed */
-      min-width: 120px; /* Ensures minimum button width */
+    padding: 0.5rem 1rem; /* Slightly smaller padding on mobile if needed */
+    min-width: 120px; /* Ensures minimum button width */
   }
 }
 
 /* Extra small screens */
 @media (max-width: 380px) {
   .button-container {
-      gap: 0.5rem; /* Further reduced gap for very small screens */
+    gap: 0.5rem; /* Further reduced gap for very small screens */
   }
-  
+
   .btn-home-menu,
   .btn-home-reservation {
-      font-size: 0.9rem; /* Slightly smaller font for very small screens */
+    font-size: 0.9rem; /* Slightly smaller font for very small screens */
   }
 }
 
@@ -274,7 +281,9 @@ main {
   border: none;
   border-radius: 20px;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.1s ease;
+  transition:
+    background-color 0.3s ease,
+    transform 0.1s ease;
   font-weight: 600;
   align-items: center; /* Vertically centers button content */
 }
@@ -285,9 +294,15 @@ main {
 }
 
 @keyframes floatAnimation {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 
 .floating {
@@ -326,7 +341,7 @@ main {
   padding: 2rem;
   background: white;
   border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .info-block .icon {
@@ -348,7 +363,7 @@ main {
   background: white;
   padding: 2rem;
   border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .quote {
@@ -371,7 +386,11 @@ main {
 }
 
 .offer-banner {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--secondary-color)
+  );
   padding: 2rem;
   border-radius: 10px;
   color: white;
@@ -385,7 +404,7 @@ main {
 }
 
 .offer {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   padding: 1.5rem;
   border-radius: 10px;
   text-align: center;
