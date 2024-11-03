@@ -1,0 +1,252 @@
+.confirmation-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  
+  /* Loading and Error states */
+  .loading-container,
+  .error-container {
+    text-align: center;
+    padding: 3rem;
+    margin: 2rem auto;
+    max-width: 600px;
+  }
+  
+  .spinner {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0a5c66;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .error-message {
+    color: #dc2626;
+    background-color: #fef2f2;
+    border: 1px solid #fee2e2;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+  
+  /* Confirmation Header */
+  .confirmation-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  
+  .confirmation-header h1 {
+    color: #0a5c66;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .status-badge {
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 1rem;
+    padding: 2rem;
+    margin: 1rem auto;
+    max-width: 600px;
+  }
+  
+  .status-badge[data-status="confirmed"] {
+    background-color: #ecfdf5;
+    border-color: #a7f3d0;
+  }
+  
+  .success-icon {
+    background-color: #059669;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.5rem;
+  }
+  
+  .confirmation-message {
+    font-size: 1.1rem;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+  
+  .customer-email {
+    font-weight: 600;
+    color: #0a5c66;
+    margin-bottom: 1rem;
+  }
+  
+  .reservation-info {
+    border-top: 1px solid #d1fae5;
+    margin-top: 1rem;
+    padding-top: 1rem;
+  }
+  
+  .confirmation-id,
+  .reservation-status {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin: 0.25rem 0;
+  }
+  
+  /* Content Sections */
+  .section {
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+  
+  .section h2 {
+    color: #0a5c66;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #f3f4f6;
+    padding-bottom: 0.5rem;
+  }
+  
+  /* Info Grid */
+  .info-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+  
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .label {
+    font-weight: 600;
+    color: #4b5563;
+    font-size: 0.9rem;
+  }
+  
+  .value {
+    color: #111827;
+    font-size: 1.1rem;
+  }
+  
+  /* Allergies Info */
+  .allergies-info {
+    grid-column: 1 / -1;
+  }
+  
+  .allergies-info .value {
+    background-color: #f9fafb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  
+  /* Next Steps */
+  .steps-list {
+    display: grid;
+    gap: 1.5rem;
+  }
+  
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .step-number {
+    background-color: #0a5c66;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  
+  /* Important Information */
+  .important-info ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .important-info li {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-bottom: 1rem;
+    color: #4b5563;
+    line-height: 1.5;
+  }
+  
+  .important-info li::before {
+    content: "•";
+    color: #0a5c66;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+  }
+  
+  /* Action Buttons */
+  .return-button,
+  .return-home-button {
+    background-color: #0a5c66;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+    display: block;
+  }
+  
+  .return-button:hover,
+  .return-home-button:hover {
+    background-color: #094c54;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .confirmation-container {
+      padding: 1rem;
+    }
+  
+    .section {
+      padding: 1.5rem;
+    }
+  
+    .info-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  
+    .confirmation-header h1 {
+      font-size: 2rem;
+    }
+  
+    .status-badge {
+      padding: 1.5rem;
+    }
+  }

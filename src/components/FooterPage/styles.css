@@ -1,0 +1,147 @@
+/* Footer Styles */
+.footer {
+  background-color: var(--secondary-color);
+  color: white;
+  padding: 4rem 2rem 2rem;
+  margin-top: 4rem;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+/* Company Info Section */
+.company-info {
+  text-align: left;
+}
+
+.company-info h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.company-info p {
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+/* Quick Links Section */
+.quick-links {
+  text-align: center;
+}
+
+.quick-links h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.quick-links ul {
+  list-style: none;
+  padding: 0;
+}
+
+.quick-links li {
+  margin-bottom: 0.5rem;
+}
+
+.quick-links a {
+  color: white;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.quick-links a:hover {
+  color: var(--accent-color);
+}
+
+/* Social Media Section */
+.social-media {
+  text-align: right;
+}
+
+.social-media h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.social-icons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.social-icon {
+  color: white;
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.social-icon:hover {
+  color: var(--accent-color);
+  transform: translateY(-2px);
+}
+
+/* Bottom Bar */
+.footer-bottom {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+}
+
+.footer-bottom p {
+  margin: 0.5rem 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .footer-grid {
+    grid-template-columns: 1fr; /* Stack the columns on smaller screens */
+    text-align: center;
+  }
+
+  .company-info,
+  .quick-links,
+  .social-media {
+    text-align: center; /* Center align all sections */
+  }
+
+  .social-icons {
+    justify-content: center; /* Center social icons */
+  }
+
+  .footer {
+    padding: 2rem 1rem; /* Adjust padding for smaller screens */
+  }
+
+  .company-info h3,
+  .quick-links h3,
+  .social-media h3 {
+    font-size: 1.25rem; /* Reduce font size for headers */
+  }
+}
+
+@media (max-width: 480px) {
+  .footer {
+    padding: 1.5rem 0.5rem; /* Further reduce padding on very small screens */
+  }
+
+  .company-info h3,
+  .quick-links h3,
+  .social-media h3 {
+    font-size: 1.1rem; /* Smaller font size for headers on mobile */
+  }
+
+  .footer-bottom {
+    font-size: 0.85rem; /* Adjust footer bottom font size for mobile */
+  }
+}

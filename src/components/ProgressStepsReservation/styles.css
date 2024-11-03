@@ -1,0 +1,98 @@
+/* Reservation Progress Steps */
+.progress-steps-reservation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    position: relative;
+  }
+  
+  .progress-step-wrapper-reservation {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+  }
+  
+  .progress-step-container-reservation {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    position: relative;
+  }
+  
+  .progress-step-circle-reservation {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: white;
+    border: 2px solid #C3D7DF;
+    color: #566A7F;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+    margin-bottom: 0.5rem;
+  }
+  
+  .progress-step-circle-reservation.active {
+    background-color: #2A9D8F;
+    border-color: #2A9D8F;
+    color: white;
+  }
+  
+  .progress-line-reservation {
+    flex: 1;
+    height: 2px;
+    background-color: #C3D7DF;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    transform: translateX(-50%);
+    transition: all 0.3s ease;
+    z-index: 1;
+  }
+  
+  .progress-line-reservation.active {
+    background-color: #2A9D8F;
+  }
+  
+  .progress-step-label-reservation {
+    margin-top: 0.5rem;
+    font-size: 14px;
+    color: #3B4E61;
+    font-weight: 500;
+    white-space: nowrap;
+    text-align: center;
+  }
+  
+  /* Remove the last progress line */
+  .progress-step-wrapper-reservation:last-child .progress-line-reservation {
+    display: none;
+  }
+  
+  /* Responsive styles for reservation progress steps */
+  @media (max-width: 480px) {
+    .progress-step-circle-reservation {
+      width: 32px;
+      height: 32px;
+      font-size: 14px;
+    }
+  
+    .progress-step-label-reservation {
+      font-size: 12px;
+    }
+  
+    .progress-steps-reservation {
+      padding: 0 0.5rem;
+    }
+  }
+  

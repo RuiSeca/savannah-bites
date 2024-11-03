@@ -1,0 +1,213 @@
+/* App.css */
+:root {
+  --primary-color: #E57A44;
+  --secondary-color: #C64F1D;
+  --accent-color: #FFA726;
+  --bg-color: #FFF5E1;
+  --text-color: #333;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(229, 122, 68, 0.1);
+  border-left-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner p {
+  color: var(--primary-color);
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.checkout-wrapper,
+.payment-wrapper {
+  width: 100%;
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Ensure proper stacking context for navigation */
+.navigation {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Footer Styles */
+.footer {
+  background-color: var(--secondary-color);
+  color: white;
+  padding: 4rem 2rem 2rem;
+  margin-top: 4rem;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+/* Company Info Section */
+.company-info {
+  text-align: left;
+}
+
+.company-info h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.company-info p {
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+/* Quick Links Section */
+.quick-links {
+  text-align: center;
+}
+
+.quick-links h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.quick-links ul {
+  list-style: none;
+  padding: 0;
+}
+
+.quick-links li {
+  margin-bottom: 0.5rem;
+}
+
+.quick-links a {
+  color: white;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.quick-links a:hover {
+  color: var(--accent-color);
+}
+
+/* Social Media Section */
+.social-media {
+  text-align: right;
+}
+
+.social-media h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.social-icons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.social-icon {
+  color: white;
+  transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.social-icon:hover {
+  color: var(--accent-color);
+  transform: translateY(-2px);
+}
+
+/* Footer Bottom Bar */
+.footer-bottom {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+}
+
+.footer-bottom p {
+  margin: 0.5rem 0;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 0 0.5rem;
+  }
+
+  .checkout-wrapper,
+  .payment-wrapper {
+    margin: 1rem auto;
+    padding: 0 0.5rem;
+  }
+
+  .spinner {
+    width: 30px;
+    height: 30px;
+  }
+
+  .footer {
+    padding: 2rem 1rem;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .company-info,
+  .social-media {
+    text-align: center;
+  }
+
+  .social-icons {
+    justify-content: center;
+  }
+}

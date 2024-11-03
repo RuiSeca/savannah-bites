@@ -1,0 +1,393 @@
+/* PaymentPage/styles.css */
+
+/* Main Layout */
+.payment-page {
+  min-height: 100vh;
+  background-color: #f7f7f7;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.payment-container {
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+/* Header Styles */
+.payment-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.payment-header h1 {
+  font-size: 2rem;
+  color: #2D3748;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.payment-header p {
+  color: #718096;
+  font-size: 1rem;
+}
+
+/* Order Summary Section */
+.order-summary {
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.order-summary h2 {
+  font-size: 1.25rem;
+  color: #2D3748;
+  margin-bottom: 1.25rem;
+  font-weight: 600;
+}
+
+.items-list {
+  margin-bottom: 1.5rem;
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.order-item:last-child {
+  border-bottom: none;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.item-name {
+  font-weight: 500;
+  color: #2D3748;
+  font-size: 1rem;
+}
+
+.item-size {
+  font-size: 0.875rem;
+  color: #718096;
+}
+
+.item-price {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.quantity {
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.price {
+  font-weight: 600;
+  color: #2D3748;
+}
+
+/* Price Breakdown */
+.price-breakdown {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px dashed #E2E8F0;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  color: #4A5568;
+}
+
+.price-row.total {
+  font-weight: 600;
+  color: #2D3748;
+  font-size: 1.125rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #E2E8F0;
+}
+
+/* Delivery Information */
+.delivery-info {
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+}
+
+.delivery-info h3 {
+  font-size: 1.25rem;
+  color: #2D3748;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-row span:first-child {
+  font-weight: 500;
+  width: 120px;
+  color: #718096;
+}
+
+.info-row span:last-child {
+  color: #2D3748;
+}
+
+/* Payment Form */
+.payment-form {
+  margin-top: 2rem;
+}
+
+.payment-element-container {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+}
+
+/* Error Message */
+.error-message {
+  background-color: #FFF5F5;
+  color: #C53030;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  border: 1px solid #FED7D7;
+  font-size: 0.875rem;
+}
+
+/* Buttons */
+.payment-button {
+  width: 100%;
+  padding: 1rem;
+  background-color: #E57A44;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.payment-button:hover {
+  background-color: #d86d37;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(229, 122, 68, 0.2);
+}
+
+.payment-button:disabled {
+  background-color: #CBD5E0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Loading States */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+}
+
+.loading-container .spinner {
+  width: 40px;
+  height: 40px;
+  border-width: 4px;
+  border-color: rgba(229, 122, 68, 0.3);
+  border-top-color: #E57A44;
+}
+
+.loading-container p {
+  color: #4A5568;
+  font-size: 1rem;
+}
+
+/* Error Container */
+.error-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  text-align: center;
+  padding: 2rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.error-container h2 {
+  color: #C53030;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.error-container p {
+  color: #4A5568;
+  margin-bottom: 1.5rem;
+}
+
+.return-button {
+  padding: 0.75rem 1.5rem;
+  background-color: #E57A44;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.return-button:hover {
+  background-color: #d86d37;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(229, 122, 68, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .payment-page {
+      padding: 1rem;
+  }
+
+  .payment-container {
+      padding: 1rem;
+  }
+
+  .payment-header h1 {
+      font-size: 1.5rem;
+  }
+
+  .payment-header p {
+      font-size: 0.875rem;
+  }
+
+  .order-summary,
+  .delivery-info {
+      padding: 1rem;
+  }
+
+  .info-row {
+      flex-direction: column;
+      gap: 0.25rem;
+  }
+
+  .info-row span:first-child {
+      width: auto;
+  }
+
+  .payment-button {
+      padding: 0.875rem;
+      font-size: 1rem;
+  }
+}
+
+/* Additional Stripe Element Styles */
+.StripeElement {
+  padding: 1rem;
+  border-radius: 6px;
+  background-color: white;
+  border: 1px solid #E2E8F0;
+  transition: all 0.2s ease;
+}
+
+.StripeElement--focus {
+  border-color: #E57A44;
+  box-shadow: 0 0 0 1px #E57A44;
+}
+
+.StripeElement--invalid {
+  border-color: #C53030;
+}
+
+/* Print Styles */
+@media print {
+  .payment-page {
+      background-color: white;
+      padding: 0;
+  }
+
+  .payment-container {
+      box-shadow: none;
+  }
+
+  .payment-button,
+  .return-button {
+      display: none;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .payment-button:hover {
+      transform: none;
+  }
+
+  .spinner {
+      animation: none;
+  }
+}
+
+/* High Contrast Mode */
+@media (forced-colors: active) {
+  .payment-button,
+  .return-button {
+      border: 2px solid ButtonText;
+  }
+}
