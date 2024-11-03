@@ -16,6 +16,7 @@
   cursor: pointer;
   overflow: hidden;
   padding: 0;
+  transition: all 0.3s ease-in-out;
 }
 
 /* Hover Effects */
@@ -56,7 +57,15 @@
 }
 
 .cooking-pot-basket.success .success-bg {
+  transition: height 0.3s ease-in;
   height: 100%;
+}
+.cooking-pot-basket .success-bg {
+  transition: height 0.3s ease-in-out;
+}
+
+.cooking-pot-basket.success {
+  transition: all 0.3s ease-in-out;
 }
 
 /* Steam Animation */
@@ -95,7 +104,7 @@
   z-index: 2;
   fill: white;
   height: 1.5em;
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
   transition: opacity 0.3s ease-in-out;
 }
 
@@ -109,8 +118,13 @@
 }
 
 @keyframes pot-reaction {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
 }
 
 /* Button Content */
@@ -143,9 +157,15 @@
 }
 
 @keyframes cartPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* Update the success message and counter styles */
@@ -162,6 +182,7 @@
   background-color: #af4c4c;
   border-radius: 50%;
   pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
 }
 
 .cooking-pot-basket.success .success-message {
@@ -204,7 +225,9 @@
   font-weight: bold;
   z-index: 1005;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  transition:
+    opacity 0.3s ease-in-out,
+    transform 0.3s ease-in-out;
 }
 
 .cooking-pot-basket.success .item-count {
@@ -244,7 +267,9 @@
   z-index: 1003;
   fill: #ff7b00;
   pointer-events: none;
-  transition: transform 0.5s ease-in-out, opacity 0.3s ease-in-out;
+  transition:
+    transform 0.5s ease-in-out,
+    opacity 0.3s ease-in-out;
 }
 
 .cooking-pot-basket.active .ingredient {
@@ -337,7 +362,7 @@
   .cooking-pot-basket {
     border: 2px solid currentColor;
   }
-  
+
   .item-count {
     border: 1px solid currentColor;
   }

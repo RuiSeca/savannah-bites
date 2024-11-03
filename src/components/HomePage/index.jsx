@@ -41,17 +41,24 @@ function HomePage() {
               Welcome to Savannah Bites, where every dish tells a story of tradition, 
               flavor, and passion. Our expert chefs bring the vibrant tastes of 
               African cuisine right to your plate, creating an unforgettable dining 
-              experience.
+              experience.From rich spices to fresh, authentic ingredients, 
+              each meal celebrates the heart and soul of home-cooked goodness, 
+              creating an unforgettable dining experience designed to bring you 
+              closer to the warmth of these cherished culinary traditions.
             </p>
-            <button onClick={handleMenuClick} className="btn">
-              Order Our Menu
-            </button>
 
-            <button onClick={handleReservationClick} className="btn_reservation">
-             Online Reservation
-            </button>
-            
+            <div class="button-container">
+              <button onClick={handleMenuClick} className="btn-home-menu">
+              Order Our Menu
+              </button>
+
+              <button onClick={handleReservationClick} className="btn-home-reservation">
+               Online Reservation
+             </button>
+            </div>
+
           </div>
+
           <div className="hero-image floating">
             <img 
               src={HomeFood} 
@@ -60,7 +67,7 @@ function HomePage() {
           </div>
         </section>
 
-        <h2 className="section-title">Restaurant Featured Dishes</h2>
+       <h2 className="section-title">Restaurant Featured Dishes</h2>
         <section className="featured-dishes">
           <div className="dish-card">
             <img src={JellofRice} alt="Jollof Rice Royale" />
@@ -69,7 +76,7 @@ function HomePage() {
               <p>Our signature spicy rice dish, perfectly seasoned and served with succulent grilled chicken.</p>
               <p className="price">£14.99</p>
               <button 
-                className="btn"
+                className="btn-home-order"
                 onClick={() => handleOrderClick('Jollof Rice Royale', '£14.99')}
               >
                 Add to Order
@@ -84,7 +91,7 @@ function HomePage() {
               <p>Smooth cornmeal porridge paired with our zesty vegetable relish for a burst of flavors.</p>
               <p className="price">£12.99</p>
               <button 
-                className="btn"
+                className="btn-home-order"
                 onClick={() => handleOrderClick('Pap & Chakalaka Fusion', '£12.99')}
               >
                 Add to Order
@@ -99,7 +106,7 @@ function HomePage() {
               <p>A beloved South African dish featuring spiced minced meat topped with creamy egg custard.</p>
               <p className="price">£16.99</p>
               <button 
-                className="btn"
+                className="btn-home-order"
                 onClick={() => handleOrderClick('Cape Bobotie Delight', '£16.99')}
               >
                 Add to Order

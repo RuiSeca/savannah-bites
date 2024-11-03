@@ -31,7 +31,7 @@
     border-radius: 50%;
     background-color: white;
     border: 2px solid #C3D7DF;
-    color: #566A7F;
+    color: #E57A44;;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -43,8 +43,8 @@
   }
   
   .progress-step-circle-reservation.active {
-    background-color: #2A9D8F;
-    border-color: #2A9D8F;
+    background-color: #E57A44;;
+    border-color: #E57A44;;
     color: white;
   }
   
@@ -62,13 +62,13 @@
   }
   
   .progress-line-reservation.active {
-    background-color: #2A9D8F;
+    background-color: #E57A44;
   }
   
   .progress-step-label-reservation {
     margin-top: 0.5rem;
     font-size: 14px;
-    color: #3B4E61;
+    color: #E57A44;
     font-weight: 500;
     white-space: nowrap;
     text-align: center;

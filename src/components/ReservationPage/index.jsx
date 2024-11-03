@@ -4,6 +4,7 @@ import axios from 'axios';
 import './styles.css';
 import ProgressStepsReservation from '../ProgressStepsReservation/index.jsx';
 
+// API configuration
 const apiUrl = process.env.NODE_ENV === 'development' 
   ? process.env.REACT_APP_NGROK_URL || process.env.REACT_APP_API_BASE_URL
   : process.env.REACT_APP_API_BASE_URL;
@@ -14,6 +15,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
+// Constants
 const TIME_SLOTS = [
   "11:00 AM", "1:00 PM", "3:00 PM", "5:00 PM", "7:00 PM", "9:00 PM"
 ];
@@ -26,26 +28,35 @@ const INITIAL_FORM_STATE = {
   allergies: ''
 };
 
+// Date utility functions
+const getTodayString = () => {
+  return new Date().toISOString().split('T')[0];
+};
+
 const ReservationPage = () => {
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState('');
+  const today = getTodayString();
+  
+  // State management
+  const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTime, setSelectedTime] = useState('');
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [availableTables, setAvailableTables] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Set minimum date on date input
   useEffect(() => {
     const dateInput = document.getElementById('date');
-    const today = new Date().toISOString().split('T')[0];
     if (dateInput) dateInput.min = today;
 
     return () => {
       setAvailableTables({});
       setError('');
     };
-  }, []);
+  }, [today]);
 
+  // Fetch available tables
   const fetchAvailableTables = useCallback(async () => {
     if (!selectedDate) return;
 
@@ -56,6 +67,7 @@ const ReservationPage = () => {
       const response = await api.get(`/reservations/availability/${selectedDate}`, {
         signal: controller.signal
       });
+      
       if (response.data.status === 'success' && response.data.availability) {
         setAvailableTables(response.data.availability);
       } else {
@@ -68,7 +80,7 @@ const ReservationPage = () => {
       if (!axios.isCancel(err)) {
         console.error('Error fetching availability:', err);
         setAvailableTables(TIME_SLOTS.reduce((acc, slot) => {
-          acc[slot] = 10; // Default availability
+          acc[slot] = 10;
           return acc;
         }, {}));
         setError('Failed to fetch availability. Please try again.');
@@ -78,11 +90,13 @@ const ReservationPage = () => {
     }
   }, [selectedDate]);
 
+  // Fetch available tables when date changes
   useEffect(() => {
     const timeoutId = selectedDate ? setTimeout(fetchAvailableTables, 300) : null;
-    return () => clearTimeout(timeoutId);
+    return () => timeoutId && clearTimeout(timeoutId);
   }, [selectedDate, fetchAvailableTables]);
 
+  // Form validation
   const validateForm = () => {
     if (!selectedDate) {
       setError('Please select a date');
@@ -111,6 +125,7 @@ const ReservationPage = () => {
     return true;
   };
 
+  // Event handlers
   const handleInputChange = (e) => {
     const { id, value } = e.target;
     setFormData(prev => ({ ...prev, [id]: value }));
@@ -121,6 +136,22 @@ const ReservationPage = () => {
     if (availableTables[time] > 0) {
       setSelectedTime(time);
       setError('');
+    }
+  };
+
+  const handleDateChange = (e) => {
+    const selectedDate = new Date(e.target.value);
+    const today = new Date();
+    
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    if (selectedDate >= today) {
+      setSelectedDate(e.target.value);
+      setSelectedTime(''); // Reset time selection when date changes
+    } else {
+      alert("Please select a future date");
+      setSelectedDate(today);
     }
   };
 
@@ -139,7 +170,11 @@ const ReservationPage = () => {
         navigate('/reservation-confirmation', {
           state: {
             reservationId: response.data.data.reservationId,
-            reservation: { ...reservationData, id: response.data.data.reservationId, status: response.data.data.status }
+            reservation: { 
+              ...reservationData, 
+              id: response.data.data.reservationId, 
+              status: response.data.data.status 
+            }
           }
         });
       } else {
@@ -171,8 +206,9 @@ const ReservationPage = () => {
               type="date"
               id="date"
               required
+              min={today}
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={handleDateChange}
             />
           </div>
 

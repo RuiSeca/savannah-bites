@@ -62,7 +62,6 @@
 }
 
 /* Menu Items Grid */
-/* Menu Items Grid */
 .menu-items {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Reduced from 280px */
@@ -204,6 +203,17 @@
   transform: scale(1.02);
 }
 
+.modal-overlay .size-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border: 2px solid var(--primary-color);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
 /* Modal Styles */
 .dish-details-modal {
   position: fixed;
