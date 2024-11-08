@@ -6,28 +6,68 @@
   --text-color: #333;
 }
 
-.home-page {
-  font-family: "Poppins", sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* Add these rules at the very top of your styles.css */
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
+/* Reset default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Update the home-page class in your styles.css */
+.home-page {
+  min-height: 100vh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  display: flex;
+  flex-direction: column;
+  position: relative; /* Changed from absolute */
+}
+
+/* Header styles */
 .header {
   background: linear-gradient(135deg, #e57a44, #c64f1d);
-  text-align: center;
-  margin-bottom: 2rem;
+  width: 100%;
+  padding: 2rem 0;
   color: white;
-  padding: 2rem;
-  border-radius: 0.75rem 0.75rem 0 0;
+  position: relative; /* Add this */
+  z-index: 1; /* Add this to ensure it's below the nav */
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  text-align: center;
+}
+
+.header-content h1 {
+  font-size: 2.8rem;
+  font-family: "Playfair Display", serif;
+  margin: 0;
+  color: white;
 }
 
 .tagline {
-  font-size: 1rem;
+  font-size: 1.2rem;
   margin-top: 0.5rem;
   font-weight: 300;
+  color: white;
+  font-style: italic;
+  letter-spacing: 1px;
 }
 
 /* Main Content */
@@ -108,6 +148,17 @@ main {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .header-content h1 {
+    font-size: 2rem;
+  }
+
+  .tagline {
+    font-size: 1rem;
+  }
+
+  .header {
+    padding: 1.5rem 0;
+  }
   .hero {
     flex-direction: column;
     text-align: center;
@@ -134,16 +185,16 @@ main {
 }
 
 @media (max-width: 480px) {
-  .header {
-    padding: 1rem;
-  }
-
   .header-content h1 {
     font-size: 1.8rem;
   }
 
   .tagline {
     font-size: 0.9rem;
+  }
+
+  .header {
+    padding: 1rem 0;
   }
 
   .hero-text h2 {

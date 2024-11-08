@@ -4,6 +4,63 @@ import { useCart } from "../../context/CartContext";
 import ProgressSteps from "../ProgressSteps/index.jsx";
 import "./styles.css";
 
+// Import images
+import suyaSkewersImage from "../../images/suya-skewers.png";
+import jollofRiceImage from "../../images/jollof-rice.jpg";
+import malvaPuddingImage from "../../images/malva-pudding.png";
+import moiMoiImage from "../../images/moi-moi.jpg";
+import puffPuffImage from "../../images/puff-puff.jpg";
+import egusiSoupImage from "../../images/egusi-soup.jpg";
+import jamaicanPattiesImage from "../../images/jamaican-patties.jpg";
+import caluluImage from "../../images/calulu.jpg";
+import cachupaImage from "../../images/cachupa.jpg";
+import chinChinImage from "../../images/chin-chin.jpg";
+import bananaFlambeImage from "../../images/banana-flambe.jpg";
+import randburgSunImage from "../../images/randburg-sun.jpg"; // Added for Randburg Sun
+import waterImage from "../../images/water.jpg";
+import cokeImage from "../../images/coca-cola.jpg";
+import iceTeaImage from "../../images/ice-tea.jpg";
+import compalImage from "../../images/compal.jpg"; // Added for Compal
+import strawberryShakeImage from "../../images/strawberry-milkshake.jpg";
+import chocolateShakeImage from "../../images/chocolate-milkshake.jpg";
+import vanillaShakeImage from "../../images/vanilla-milkshake.jpg";
+import oreoShakeImage from "../../images/oreo-milkshake.jpg"; // Added for Oreo Milkshake
+import summersBeerImage from "../../images/apple-somersby.jpg";
+import superBockImage from "../../images/super-bock.jpg";
+import stellaImage from "../../images/stella-artois.jpg";
+import cucaImage from "../../images/cuca.jpg"; // Added for Cuca
+
+// Image mapping
+const images = {
+  "suya-skewers.png": suyaSkewersImage,
+  "jollof-rice.jpg": jollofRiceImage,
+  "malva-pudding.png": malvaPuddingImage,
+  "moi-moi.jpg": moiMoiImage,
+  "puff-puff.jpg": puffPuffImage,
+  "jamaican-patties.jpg": jamaicanPattiesImage,
+  "egusi-soup.jpg": egusiSoupImage,
+  "calulu.jpg": caluluImage,
+  "cachupa.jpg": cachupaImage,
+  "chin-chin.jpg": chinChinImage,
+  "banana-flambe.jpg": bananaFlambeImage,
+  "randburg-sun.jpg": randburgSunImage,
+  "water.jpg": waterImage,
+  "coca-cola.jpg": cokeImage,
+  "ice-tea.jpg": iceTeaImage,
+  "compal.jpg": compalImage,
+  "strawberry-milkshake.jpg": strawberryShakeImage,
+  "chocolate-milkshake.jpg": chocolateShakeImage,
+  "vanilla-milkshake.jpg": vanillaShakeImage,
+  "oreo-milkshake.jpg": oreoShakeImage,
+  "apple-somersby.jpg": summersBeerImage,
+  "super-bock.jpg": superBockImage,
+  "stella-artois.jpg": stellaImage,
+  "cuca.jpg": cucaImage,
+};
+
+const getImage = (filename) =>
+  images[filename] || "https://via.placeholder.com/150";
+
 const DELIVERY_FEE = 2.5;
 const MINIMUM_ORDER_AMOUNT = 10.0;
 const MAX_ITEMS_PER_ORDER = 20;
@@ -260,6 +317,11 @@ function CheckoutPage() {
                 className="cart-item"
               >
                 <div className="item-info">
+                  <img
+                    src={getImage(item.image)}
+                    alt={item.name}
+                    className="checkout-item-image"
+                  />
                   <span className="item-name">
                     {item.name}
                     {item.size && (

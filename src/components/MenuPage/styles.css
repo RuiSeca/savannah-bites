@@ -1,19 +1,39 @@
 /* Menu Page Styles */
 .menu-page {
+  flex: 1;
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   background-color: var(--bg-color);
+  min-height: calc(100vh - var(--nav-height)); /* Account for navigation */
+  display: flex;
+  flex-direction: column;
 }
 
+/* Update the menu-title styles */
 .menu-title {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-size: 3rem;
   color: var(--primary-color);
   text-align: center;
   margin-bottom: 2rem;
+  margin-top: 1rem; /* Add some spacing from the nav */
 }
+
+.menu-header {
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--secondary-color)
+  );
+  width: 100%;
+  padding: 2.5rem 0;
+  margin-bottom: 2rem;
+  border-radius: 0.5rem;
+}
+
 .menu-header {
   display: flex;
   justify-content: space-between;
@@ -22,10 +42,30 @@
 }
 
 .menu-header h1 {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-size: 2.5rem;
   color: var(--secondary-color);
   margin: 0;
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  text-align: center;
+  color: white;
+}
+
+.header-content h1 {
+  font-family: "Playfair Display", serif;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: white;
+}
+
+.header-content .tagline {
+  font-size: 1.2rem;
+  opacity: 0.9;
 }
 
 .basket-icon {
@@ -38,11 +78,11 @@
   transform: scale(1.1);
 }
 
-/* Categories */
 .menu-categories {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  flex: 1; /* This ensures it takes up available space */
 }
 
 .menu-category {
@@ -53,7 +93,7 @@
 }
 
 .category-title {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-size: 1.8rem;
   color: var(--secondary-color);
   margin-bottom: 1.5rem;
@@ -64,7 +104,10 @@
 /* Menu Items Grid */
 .menu-items {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Reduced from 280px */
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(200px, 1fr)
+  ); /* Reduced from 280px */
   gap: 1.5rem; /* Reduced from 2rem */
 }
 
@@ -73,7 +116,9 @@
   border-radius: 8px; /* Reduced from 10px */
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   max-width: 220px; /* Added max-width for consistency */
   margin: 0 auto;
 }
@@ -195,7 +240,9 @@
   border-radius: 25px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  transition:
+    background-color 0.3s ease,
+    transform 0.2s ease;
 }
 
 .add-to-cart-button:hover {
@@ -203,17 +250,6 @@
   transform: scale(1.02);
 }
 
-.modal-overlay .size-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border: 2px solid var(--primary-color);
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
 /* Modal Styles */
 .dish-details-modal {
   position: fixed;
@@ -271,12 +307,14 @@
 }
 
 .modal-content h2 {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   color: var(--secondary-color);
   margin: 0 0 1rem 0;
 }
 
-.description, .ingredients, .story {
+.description,
+.ingredients,
+.story {
   margin: 1rem 0;
   line-height: 1.6;
 }
@@ -538,10 +576,9 @@
   .menu-item-buttons {
     flex-direction: column;
   }
-  
+
   .size-modal {
     width: 95%;
     margin: 1rem;
   }
 }
-

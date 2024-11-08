@@ -7,6 +7,34 @@
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  scroll-behavior: instant; /* Override smooth scroll to ensure immediate scrolling */
+}
+
+#root {
+  min-height: 100%;
+  position: relative;
+}
+
+html,
+body {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+.confirmation-container {
+  flex: 1;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  padding-bottom: 2rem;
+}
 
 /* Header Styles */
 .confirmation-header {
@@ -16,7 +44,7 @@
 
 .confirmation-header h1 {
   font-size: 2.2rem;
-  color: #2A9D8F;
+  color: #2a9d8f;
   margin-bottom: 1.5rem;
   font-weight: 600;
 }
@@ -32,7 +60,7 @@
 .success-icon {
   width: 48px;
   height: 48px;
-  background: #2A9D8F;
+  background: #2a9d8f;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -50,7 +78,7 @@
 
 .customer-email {
   font-size: 1.2rem;
-  color: #2A9D8F;
+  color: #2a9d8f;
   font-weight: 600;
   margin-bottom: 1.5rem;
 }
@@ -78,7 +106,7 @@
 }
 
 .section h2 {
-  color: #2D3748;
+  color: #2d3748;
   font-size: 1.4rem;
   margin-bottom: 1.5rem;
   font-weight: 600;
@@ -104,7 +132,7 @@
 
 .value {
   font-size: 1rem;
-  color: #2D3748;
+  color: #2d3748;
 }
 
 /* Order Items Styles */
@@ -135,7 +163,7 @@
 
 .item-header h3 {
   font-size: 1.1rem;
-  color: #2D3748;
+  color: #2d3748;
   font-weight: 500;
 }
 
@@ -167,7 +195,7 @@
   justify-content: space-between;
   padding: 0.5rem 0;
   font-size: 1rem;
-  color: #4A5568;
+  color: #4a5568;
 }
 
 .price-row.total {
@@ -175,7 +203,7 @@
   margin-top: 1rem;
   padding-top: 1rem;
   font-weight: 600;
-  color: #2A9D8F;
+  color: #2a9d8f;
   font-size: 1.2rem;
 }
 
@@ -197,7 +225,7 @@
 .step-number {
   width: 32px;
   height: 32px;
-  background: #2A9D8F;
+  background: #2a9d8f;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -215,7 +243,7 @@
 
 .return-home-button {
   padding: 0.8rem 2rem;
-  background: #2A9D8F;
+  background: #2a9d8f;
   color: white;
   border: none;
   border-radius: 8px;
@@ -245,19 +273,23 @@
   width: 40px;
   height: 40px;
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #2A9D8F;
+  border-top: 4px solid #2a9d8f;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 1rem;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error-message {
-  color: #E53E3E;
+  color: #e53e3e;
   margin: 1rem 0;
 }
 

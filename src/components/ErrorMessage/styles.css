@@ -1,0 +1,135 @@
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  margin: 1rem;
+  background-color: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+  text-align: center;
+  max-width: 500px;
+  margin: 2rem auto;
+}
+
+.error-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  animation: shake 0.5s ease-in-out;
+}
+
+.error-message {
+  color: #e53e3e;
+  font-size: 1.1rem;
+  margin: 0.5rem 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.retry-button {
+  background-color: #0a5c66;
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.retry-button:hover {
+  background-color: #084d56;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.retry-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.retry-button:disabled {
+  background-color: #cbd5e0;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .error-container {
+    background-color: #2d3748;
+    border-color: #4a5568;
+  }
+
+  .error-message {
+    color: #fc8181;
+  }
+
+  .retry-button {
+    background-color: #0a5c66;
+  }
+
+  .retry-button:hover {
+    background-color: #084d56;
+  }
+
+  .retry-button:disabled {
+    background-color: #4a5568;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .error-container {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+
+  .error-icon {
+    font-size: 2rem;
+  }
+
+  .error-message {
+    font-size: 1rem;
+  }
+
+  .retry-button {
+    padding: 0.5rem 1.5rem;
+  }
+}
+
+/* High contrast mode */
+@media (forced-colors: active) {
+  .retry-button {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation: spin 2s linear infinite;
+  }
+
+  .error-icon {
+    animation: none;
+  }
+
+  .retry-button {
+    transition: none;
+  }
+}

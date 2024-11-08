@@ -1,5 +1,40 @@
-/* PaymentPage/styles.css */
+/* Loader Container Styles */
+.loader-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background-color: rgba(255, 255, 255, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  flex-direction: column;
+}
 
+/* Ensure the cooking animation container is properly sized */
+.loader-container #cooking {
+  position: relative;
+  margin: 0 auto;
+  width: 75vh;
+  height: 75vh;
+  overflow: hidden;
+}
+
+/* Animation title styling */
+.loader-container h1 {
+  position: relative;
+  margin: 0 auto;
+  top: 0;
+  width: 100%;
+  text-align: center;
+  font-family: "Amatic SC";
+  font-size: 6vh;
+  color: #333;
+  opacity: 0.75;
+  animation: pulse 2.5s linear infinite;
+}
 /* Main Layout */
 .payment-page {
   min-height: 100vh;
@@ -30,7 +65,7 @@
 
 .payment-header h1 {
   font-size: 2rem;
-  color: #2D3748;
+  color: #2d3748;
   margin-bottom: 0.5rem;
   font-weight: 600;
 }
@@ -50,7 +85,7 @@
 
 .order-summary h2 {
   font-size: 1.25rem;
-  color: #2D3748;
+  color: #2d3748;
   margin-bottom: 1.25rem;
   font-weight: 600;
 }
@@ -64,7 +99,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 0;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .order-item:last-child {
@@ -79,7 +114,7 @@
 
 .item-name {
   font-weight: 500;
-  color: #2D3748;
+  color: #2d3748;
   font-size: 1rem;
 }
 
@@ -101,30 +136,30 @@
 
 .price {
   font-weight: 600;
-  color: #2D3748;
+  color: #2d3748;
 }
 
 /* Price Breakdown */
 .price-breakdown {
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 2px dashed #E2E8F0;
+  border-top: 2px dashed #e2e8f0;
 }
 
 .price-row {
   display: flex;
   justify-content: space-between;
   padding: 0.5rem 0;
-  color: #4A5568;
+  color: #4a5568;
 }
 
 .price-row.total {
   font-weight: 600;
-  color: #2D3748;
+  color: #2d3748;
   font-size: 1.125rem;
   margin-top: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px solid #E2E8F0;
+  border-top: 1px solid #e2e8f0;
 }
 
 /* Delivery Information */
@@ -137,7 +172,7 @@
 
 .delivery-info h3 {
   font-size: 1.25rem;
-  color: #2D3748;
+  color: #2d3748;
   margin-bottom: 1rem;
   font-weight: 600;
 }
@@ -159,7 +194,7 @@
 }
 
 .info-row span:last-child {
-  color: #2D3748;
+  color: #2d3748;
 }
 
 /* Payment Form */
@@ -172,17 +207,17 @@
   padding: 1.5rem;
   background-color: #f8fafc;
   border-radius: 8px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #e2e8f0;
 }
 
 /* Error Message */
 .error-message {
-  background-color: #FFF5F5;
-  color: #C53030;
+  background-color: #fff5f5;
+  color: #c53030;
   padding: 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
-  border: 1px solid #FED7D7;
+  border: 1px solid #fed7d7;
   font-size: 0.875rem;
 }
 
@@ -190,7 +225,7 @@
 .payment-button {
   width: 100%;
   padding: 1rem;
-  background-color: #E57A44;
+  background-color: #e57a44;
   color: white;
   border: none;
   border-radius: 8px;
@@ -211,7 +246,7 @@
 }
 
 .payment-button:disabled {
-  background-color: #CBD5E0;
+  background-color: #cbd5e0;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -235,8 +270,12 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-container {
@@ -253,11 +292,11 @@
   height: 40px;
   border-width: 4px;
   border-color: rgba(229, 122, 68, 0.3);
-  border-top-color: #E57A44;
+  border-top-color: #e57a44;
 }
 
 .loading-container p {
-  color: #4A5568;
+  color: #4a5568;
   font-size: 1rem;
 }
 
@@ -273,19 +312,19 @@
 }
 
 .error-container h2 {
-  color: #C53030;
+  color: #c53030;
   margin-bottom: 1rem;
   font-size: 1.25rem;
 }
 
 .error-container p {
-  color: #4A5568;
+  color: #4a5568;
   margin-bottom: 1.5rem;
 }
 
 .return-button {
   padding: 0.75rem 1.5rem;
-  background-color: #E57A44;
+  background-color: #e57a44;
   color: white;
   border: none;
   border-radius: 6px;
@@ -303,38 +342,58 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .payment-page {
-      padding: 1rem;
+    padding: 1rem;
   }
 
   .payment-container {
-      padding: 1rem;
+    padding: 1rem;
   }
 
   .payment-header h1 {
-      font-size: 1.5rem;
+    font-size: 1.5rem;
   }
 
   .payment-header p {
-      font-size: 0.875rem;
+    font-size: 0.875rem;
   }
 
   .order-summary,
   .delivery-info {
-      padding: 1rem;
+    padding: 1rem;
   }
 
   .info-row {
-      flex-direction: column;
-      gap: 0.25rem;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   .info-row span:first-child {
-      width: auto;
+    width: auto;
   }
 
   .payment-button {
-      padding: 0.875rem;
-      font-size: 1rem;
+    padding: 0.875rem;
+    font-size: 1rem;
+  }
+
+  .loader-container #cooking {
+    width: 50vh;
+    height: 50vh;
+  }
+
+  .loader-container h1 {
+    font-size: 4vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .loader-container #cooking {
+    width: 40vh;
+    height: 40vh;
+  }
+
+  .loader-container h1 {
+    font-size: 3vh;
   }
 }
 
@@ -343,44 +402,44 @@
   padding: 1rem;
   border-radius: 6px;
   background-color: white;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #e2e8f0;
   transition: all 0.2s ease;
 }
 
 .StripeElement--focus {
-  border-color: #E57A44;
-  box-shadow: 0 0 0 1px #E57A44;
+  border-color: #e57a44;
+  box-shadow: 0 0 0 1px #e57a44;
 }
 
 .StripeElement--invalid {
-  border-color: #C53030;
+  border-color: #c53030;
 }
 
 /* Print Styles */
 @media print {
   .payment-page {
-      background-color: white;
-      padding: 0;
+    background-color: white;
+    padding: 0;
   }
 
   .payment-container {
-      box-shadow: none;
+    box-shadow: none;
   }
 
   .payment-button,
   .return-button {
-      display: none;
+    display: none;
   }
 }
 
 /* Accessibility */
 @media (prefers-reduced-motion: reduce) {
   .payment-button:hover {
-      transform: none;
+    transform: none;
   }
 
   .spinner {
-      animation: none;
+    animation: none;
   }
 }
 
@@ -388,6 +447,6 @@
 @media (forced-colors: active) {
   .payment-button,
   .return-button {
-      border: 2px solid ButtonText;
+    border: 2px solid ButtonText;
   }
 }

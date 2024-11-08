@@ -1,18 +1,18 @@
 // src/config/api.js
 
 // Environment-based API URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 // Common headers
 const DEFAULT_HEADERS = {
-  'Content-Type': 'application/json',
+  "Content-Type": "application/json",
 };
 
 // Generic API error class
 class APIError extends Error {
   constructor(message, status, data) {
     super(message);
-    this.name = 'APIError';
+    this.name = "APIError";
     this.status = status;
     this.data = data;
   }
@@ -33,7 +33,7 @@ async function fetchWithErrorHandling(url, options) {
 
     if (!response.ok) {
       throw new APIError(
-        data.error || 'An error occurred',
+        data.error || "An error occurred",
         response.status,
         data
       );
@@ -44,35 +44,36 @@ async function fetchWithErrorHandling(url, options) {
     if (error instanceof APIError) {
       throw error;
     }
-    
-    console.error('API Request failed:', error);
-    throw new APIError(
-      'Failed to connect to the server',
-      500,
-      { originalError: error.message }
-    );
+
+    console.error("API Request failed:", error);
+    throw new APIError("Failed to connect to the server", 500, {
+      originalError: error.message,
+    });
   }
 }
 
 // Payment related API calls
 export const paymentAPI = {
   createPaymentIntent: async (amount) => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/orders/create-payment-intent`, {
-      method: 'POST',
-      body: JSON.stringify({ amount }),
-    });
+    return fetchWithErrorHandling(
+      `${API_BASE_URL}/api/orders/create-payment-intent`,
+      {
+        method: "POST",
+        body: JSON.stringify({ amount }),
+      }
+    );
   },
 
   createOrder: async (orderData) => {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/orders`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(orderData),
     });
   },
 
   getOrderStatus: async (orderId) => {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/orders/${orderId}`, {
-      method: 'GET',
+      method: "GET",
     });
   },
 };
@@ -81,14 +82,14 @@ export const paymentAPI = {
 export const orderAPI = {
   create: async (orderData) => {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/orders`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(orderData),
     });
   },
 
   getStatus: async (orderId) => {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/orders/${orderId}`, {
-      method: 'GET',
+      method: "GET",
     });
   },
 };
@@ -105,15 +106,15 @@ export const checkAPIHealth = async () => {
     const response = await fetch(`${API_BASE_URL}/health`);
     return response.ok;
   } catch (error) {
-    console.error('API health check failed:', error);
+    console.error("API health check failed:", error);
     return false;
   }
 };
 
 // Validation utilities
 export const validateAmount = (amount) => {
-  if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
-    throw new Error('Invalid amount provided');
+  if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
+    throw new Error("Invalid amount provided");
   }
   return true;
 };

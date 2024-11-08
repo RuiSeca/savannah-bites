@@ -59,10 +59,11 @@ function AppContent() {
           <Navigation />
         </Suspense>
       )}
+
+      <ScrollToTop />
+
       <main className="main-content">
         <Suspense fallback={<LoadingSpinner />}>
-          <ScrollToTop />
-
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/menu" element={<MenuPage />} />

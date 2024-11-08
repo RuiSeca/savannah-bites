@@ -187,7 +187,7 @@ function HomePage() {
                 "The best African food I've had outside of Lagos! The Jollof
                 Rice is absolutely incredible."
               </div>
-              <div className="author">- Sarah M.</div>
+              <div className="author">- Beatriz M.</div>
               <div className="stars">★★★★★</div>
             </div>
             <div className="testimonial-card">

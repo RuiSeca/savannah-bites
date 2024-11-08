@@ -1,85 +1,92 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { useLocation, useNavigate } from 'react-router-dom';
-import './styles.css';
-import ProgressSteps from '../ProgressSteps/index.jsx';
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
+import ProgressSteps from "../ProgressSteps";
+import AnimatedCookingLoader from "../AnimatedCookingLoader"; // Keep imports at the top
+import "./styles.css";
 
 // API configuration
-const apiUrl = process.env.NODE_ENV === 'development' 
-  ? process.env.REACT_APP_NGROK_URL || process.env.REACT_APP_API_BASE_URL
-  : process.env.REACT_APP_API_BASE_URL;
+const apiUrl =
+  process.env.NODE_ENV === "development"
+    ? process.env.REACT_APP_NGROK_URL || process.env.REACT_APP_API_BASE_URL
+    : process.env.REACT_APP_API_BASE_URL;
 
-// Create axios instance with proper URL construction
 const api = axios.create({
-  baseURL: apiUrl.endsWith('/api') ? apiUrl : `${apiUrl}/api`,
+  baseURL: apiUrl.endsWith("/api") ? apiUrl : `${apiUrl}/api`,
   withCredentials: true,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    "Content-Type": "application/json",
+  },
 });
 
 const OrderConfirmationPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // Removed 'status' since it's not being used
-  const { orderId, paymentIntentId } = location.state || {};
   const [orderDetails, setOrderDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch order details
+  const orderId = location.state?.orderId || sessionStorage.getItem("orderId");
+  const paymentIntentId =
+    location.state?.paymentIntentId ||
+    sessionStorage.getItem("paymentIntentId");
+
+  // Scroll to top when component mounts
   useEffect(() => {
-    // Redirect if no order ID
-    if (!orderId) {
-      console.log('No order ID provided, redirecting to home');
-      navigate('/');
-      return;
-    }
+    window.scrollTo(0, 0); // This will scroll to top after the component mounts
+  }, []);
+
+  useEffect(() => {
+    const cleanupSessionStorage = () => {
+      sessionStorage.removeItem("paymentSuccess");
+      sessionStorage.removeItem("orderId");
+      sessionStorage.removeItem("paymentIntentId");
+    };
 
     const fetchOrderDetails = async () => {
       try {
-        console.log('Fetching order details for ID:', orderId);
-        console.log('API URL:', `${api.defaults.baseURL}/orders/${orderId}`);
-
-        const response = await api.get(`/orders/${orderId}`);
-        console.log('Order details response:', response.data);
-
-        if (!response.data || !response.data.order) {
-          throw new Error('Invalid response format from server');
+        if (!orderId) {
+          console.log("No order ID provided, redirecting to home");
+          cleanupSessionStorage();
+          navigate("/");
+          return;
         }
 
+        console.log("Fetching order details for ID:", orderId);
+        const response = await api.get(`/orders/${orderId}`);
+        if (!response.data || !response.data.order) {
+          throw new Error("Invalid response format from server");
+        }
         setOrderDetails(response.data.order);
+        cleanupSessionStorage();
       } catch (error) {
-        console.error('Error fetching order details:', error);
-        console.error('Error details:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          config: error.config
-        });
-        
+        console.error("Error fetching order details:", error);
         setError(
-          error.response?.data?.message || 
-          error.message || 
-          'Failed to load order details'
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to load order details"
         );
       } finally {
-        setLoading(false);
+        setTimeout(() => {
+          setLoading(false);
+        }, 5000);
       }
     };
 
     fetchOrderDetails();
+
+    return cleanupSessionStorage;
   }, [orderId, navigate]);
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Not specified';
+    if (!dateString) return "Not specified";
     try {
-      return new Date(dateString).toLocaleString('en-GB', {
-        dateStyle: 'medium',
-        timeStyle: 'short'
+      return new Date(dateString).toLocaleString("en-GB", {
+        dateStyle: "medium",
+        timeStyle: "short",
       });
     } catch (error) {
-      console.error('Date formatting error:', error);
+      console.error("Date formatting error:", error);
       return dateString;
     }
   };
@@ -87,8 +94,7 @@ const OrderConfirmationPage = () => {
   if (loading) {
     return (
       <div className="loading-container" role="status">
-        <div className="spinner"></div>
-        <p>Loading your order details...</p>
+        <AnimatedCookingLoader />
       </div>
     );
   }
@@ -98,10 +104,7 @@ const OrderConfirmationPage = () => {
       <div className="error-container" role="alert">
         <h2>Error Loading Order</h2>
         <p className="error-message">{error}</p>
-        <button 
-          onClick={() => navigate('/')} 
-          className="return-button"
-        >
+        <button onClick={() => navigate("/")} className="return-button">
           Return to Home
         </button>
       </div>
@@ -113,10 +116,7 @@ const OrderConfirmationPage = () => {
       <div className="error-container" role="alert">
         <h2>Order Not Found</h2>
         <p>We couldn't find the order details you're looking for.</p>
-        <button 
-          onClick={() => navigate('/')} 
-          className="return-button"
-        >
+        <button onClick={() => navigate("/")} className="return-button">
           Return to Home
         </button>
       </div>
@@ -126,23 +126,26 @@ const OrderConfirmationPage = () => {
   return (
     <div className="confirmation-container">
       <ProgressSteps currentStep={3} />
-      
+
       <div className="confirmation-header">
         <h1>Order Confirmation</h1>
-        <div className="status-badge" data-status={orderDetails.orderStatus?.current?.toLowerCase()}>
+        <div
+          className="status-badge"
+          data-status={orderDetails.orderStatus?.current?.toLowerCase()}
+        >
           <div className="success-icon">✓</div>
           <p className="confirmation-message">
             Thank you for your order! A confirmation email has been sent to:
           </p>
           <p className="customer-email">{orderDetails.customer?.email}</p>
-          
+
           <div className="order-info">
             <p className="confirmation-id">Order ID: {orderId}</p>
             {paymentIntentId && (
               <p className="payment-id">Payment ID: {paymentIntentId}</p>
             )}
             <p className="order-status">
-              Status: {orderDetails.orderStatus?.current || 'Processing'}
+              Status: {orderDetails.orderStatus?.current || "Processing"}
             </p>
           </div>
         </div>
@@ -180,7 +183,9 @@ const OrderConfirmationPage = () => {
               <span className="label">Delivery Address:</span>
               <div className="value">
                 <p>{orderDetails.address?.street}</p>
-                <p>{orderDetails.address?.city}, {orderDetails.address?.postcode}</p>
+                <p>
+                  {orderDetails.address?.city}, {orderDetails.address?.postcode}
+                </p>
               </div>
             </div>
             {orderDetails.specialInstructions && (
@@ -197,14 +202,21 @@ const OrderConfirmationPage = () => {
           <div className="items-grid">
             {orderDetails.orderDetails?.length > 0 ? (
               orderDetails.orderDetails.map((item, index) => (
-                <div key={`${item._id || item.id}-${index}`} className="order-item">
+                <div
+                  key={`${item._id || item.id}-${index}`}
+                  className="order-item"
+                >
                   <div className="item-header">
                     <h3>{item.name}</h3>
-                    {item.size && <span className="item-size">{item.size}</span>}
+                    {item.size && (
+                      <span className="item-size">{item.size}</span>
+                    )}
                   </div>
                   <div className="item-details">
                     <span className="quantity">Qty: {item.quantity}</span>
-                    <span className="price">£{(item.price * item.quantity).toFixed(2)}</span>
+                    <span className="price">
+                      £{(item.price * item.quantity).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               ))
@@ -250,10 +262,7 @@ const OrderConfirmationPage = () => {
         </div>
 
         <div className="actions section">
-          <button 
-            onClick={() => navigate('/')} 
-            className="return-home-button"
-          >
+          <button onClick={() => navigate("/")} className="return-home-button">
             Return to Home
           </button>
         </div>
