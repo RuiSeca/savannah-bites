@@ -46,7 +46,7 @@ function CheckoutForm() {
     return {
       subtotal,
       deliveryFee: DELIVERY_FEE,
-      total: subtotal + DELIVERY_FEE,
+      total: Math.round((subtotal + DELIVERY_FEE) * 100), // Convert to cents (GBP)
     };
   };
 
@@ -281,28 +281,29 @@ function PaymentPage() {
       return;
     }
 
+    const { total } = calculateTotals();
+    const updateOrderDetails = {
+      ...orderDetails,
+      totalAmount: total,
+    };
+
     const createPaymentIntent = async () => {
       try {
         console.log("Creating payment intent...");
 
-        // Use the paymentAPI method instead of direct axios call
         const response = await paymentAPI.createPaymentIntent({
-          amount: orderDetails.totalAmount,
+          amount: updateOrderDetails.totalAmount,
           currency: "gbp",
           metadata: {
-            customerName: orderDetails.customerInfo.name,
-            customerEmail: orderDetails.customerInfo.email,
+            customerName: updateOrderDetails.customerInfo.name,
+            customerEmail: updateOrderDetails.customerInfo.email,
           },
         });
 
         console.log("Payment intent created:", response);
-
-        // The response is already processed by your API layer
         setClientSecret(response.clientSecret);
       } catch (error) {
         console.error("Payment setup error:", error);
-
-        // Error is already formatted by your API layer
         setError(
           error.data?.message ||
             error.message ||
