@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import "./styles.css";
 import { useCart } from "../../context/CartContext";
-import { checkAPIHealth } from "../../config/api";
 
 // Import images
 import suyaSkewersImage from "../../images/suya-skewers.png";
@@ -114,44 +113,37 @@ function MenuPage() {
       setMenuLoading(true);
       setMenuError(false);
 
-      // Log the full URL for debugging
       const apiUrl = `${process.env.REACT_APP_API_BASE_URL}/api/menu`;
       console.log("Fetching menu from:", apiUrl);
 
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // Remove credentials if not needed for now
-        // credentials: "include",
-      });
+      const response = await fetch(apiUrl);
 
-      // Log response details for debugging
-      console.log("Response status:", response.status);
-      console.log("Content type:", response.headers.get("content-type"));
+      console.log("Response type:", response.headers.get("content-type"));
 
-      // Check if response is OK
-      if (!response.ok) {
+      if (!response.headers.get("content-type")?.includes("application/json")) {
         const text = await response.text();
-        console.log("Error response body:", text);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.error("Received non-JSON response:", text);
+        throw new Error("Invalid response format");
       }
 
       const data = await response.json();
-      console.log("Received data:", data);
 
-      if (data.status === "success") {
+      if (!response.ok) {
+        throw new Error(
+          data.message || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      if (Array.isArray(data.data)) {
         setMenuItems(data.data);
       } else {
-        throw new Error(data.message || "Failed to fetch menu data");
+        console.error("Unexpected data format:", data);
+        throw new Error("Invalid data format");
       }
     } catch (error) {
       console.error("Error fetching menu items:", error);
       setMenuError(true);
-      setMenuErrorMessage(
-        error.data?.message || error.message || "Failed to load menu items"
-      );
+      setMenuErrorMessage(error.message || "Failed to load menu items");
     } finally {
       setMenuLoading(false);
     }
