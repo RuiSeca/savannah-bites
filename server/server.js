@@ -24,6 +24,7 @@ app.use(
       "http://localhost:5000",
       "http://10.77.228.19:3000",
       "https://e262-194-35-122-157.ngrok-free.app",
+      "https://savannah-bites.onrender.com",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],

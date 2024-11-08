@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "echo 'No build step required'",
+    "postinstall": "npm install"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -22,6 +24,10 @@
   },
   "devDependencies": {
     "nodemon": "^2.0.7"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
   },
   "author": "Your Name",
   "license": "ISC"

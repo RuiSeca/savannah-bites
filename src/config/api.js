@@ -1,25 +1,37 @@
 // src/config/api.js
 
-// Environment-based API URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+// Environment-based API URL with validation
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL || "http://localhost:5000";
+
+// Validate API URL configuration
+const validateAPIUrl = () => {
+  if (!API_BASE_URL) {
+    console.error("API Base URL is not configured properly");
+    throw new Error("API_BASE_URL is not defined");
+  }
+};
 
 // Common headers
 const DEFAULT_HEADERS = {
   "Content-Type": "application/json",
 };
 
-// Generic API error class
+// Generic API error class with enhanced error details
 class APIError extends Error {
   constructor(message, status, data) {
     super(message);
     this.name = "APIError";
     this.status = status;
     this.data = data;
+    this.timestamp = new Date().toISOString();
   }
 }
 
-// Generic fetch wrapper with error handling
+// Enhanced fetch wrapper with comprehensive error handling
 async function fetchWithErrorHandling(url, options) {
+  validateAPIUrl();
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -27,13 +39,18 @@ async function fetchWithErrorHandling(url, options) {
         ...DEFAULT_HEADERS,
         ...options.headers,
       },
+      credentials: "include", // For handling cookies if needed
     });
 
-    const data = await response.json();
+    // Handle different response types
+    const contentType = response.headers.get("content-type");
+    const data = contentType?.includes("application/json")
+      ? await response.json()
+      : await response.text();
 
     if (!response.ok) {
       throw new APIError(
-        data.error || "An error occurred",
+        typeof data === "object" ? data.error : "An error occurred",
         response.status,
         data
       );
@@ -45,7 +62,12 @@ async function fetchWithErrorHandling(url, options) {
       throw error;
     }
 
-    console.error("API Request failed:", error);
+    console.error("API Request failed:", {
+      url,
+      error: error.message,
+      baseUrl: API_BASE_URL,
+    });
+
     throw new APIError("Failed to connect to the server", 500, {
       originalError: error.message,
     });
@@ -55,6 +77,7 @@ async function fetchWithErrorHandling(url, options) {
 // Payment related API calls
 export const paymentAPI = {
   createPaymentIntent: async (amount) => {
+    validateAmount(amount);
     return fetchWithErrorHandling(
       `${API_BASE_URL}/api/orders/create-payment-intent`,
       {
@@ -72,15 +95,29 @@ export const paymentAPI = {
   },
 
   getOrderStatus: async (orderId) => {
+    if (!orderId) throw new Error("Order ID is required");
     return fetchWithErrorHandling(`${API_BASE_URL}/api/orders/${orderId}`, {
       method: "GET",
     });
   },
+
+  // New method for handling payment confirmation
+  confirmPayment: async (paymentIntentId) => {
+    if (!paymentIntentId) throw new Error("Payment Intent ID is required");
+    return fetchWithErrorHandling(
+      `${API_BASE_URL}/api/orders/confirm-payment`,
+      {
+        method: "POST",
+        body: JSON.stringify({ paymentIntentId }),
+      }
+    );
+  },
 };
 
-// Order related API calls
+// Order related API calls with enhanced error handling
 export const orderAPI = {
   create: async (orderData) => {
+    if (!orderData) throw new Error("Order data is required");
     return fetchWithErrorHandling(`${API_BASE_URL}/api/orders`, {
       method: "POST",
       body: JSON.stringify(orderData),
@@ -88,56 +125,98 @@ export const orderAPI = {
   },
 
   getStatus: async (orderId) => {
+    if (!orderId) throw new Error("Order ID is required");
     return fetchWithErrorHandling(`${API_BASE_URL}/api/orders/${orderId}`, {
       method: "GET",
     });
   },
+
+  // New method for getting order history
+  getHistory: async () => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/orders/history`, {
+      method: "GET",
+    });
+  },
+
+  // New method for updating order status
+  updateStatus: async (orderId, status) => {
+    if (!orderId) throw new Error("Order ID is required");
+    if (!status) throw new Error("Status is required");
+    return fetchWithErrorHandling(
+      `${API_BASE_URL}/api/orders/${orderId}/status`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      }
+    );
+  },
 };
 
-// Configuration object
+// Configuration object with additional options
 export const apiConfig = {
   baseURL: API_BASE_URL,
   headers: DEFAULT_HEADERS,
+  timeout: 15000, // 15 seconds timeout
+  retryAttempts: 3,
 };
 
-// Utility to check if API is available
+// Enhanced API health check
 export const checkAPIHealth = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/health`);
-    return response.ok;
+    console.log("Checking API health at:", API_BASE_URL);
+    const startTime = Date.now();
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: "GET",
+      headers: DEFAULT_HEADERS,
+    });
+    const endTime = Date.now();
+
+    const healthStatus = {
+      isHealthy: response.ok,
+      responseTime: endTime - startTime,
+      timestamp: new Date().toISOString(),
+    };
+
+    console.log("API health status:", healthStatus);
+    return healthStatus;
   } catch (error) {
-    console.error("API health check failed:", error);
-    return false;
+    console.error("API health check failed:", {
+      error: error.message,
+      baseUrl: API_BASE_URL,
+      timestamp: new Date().toISOString(),
+    });
+    return {
+      isHealthy: false,
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    };
   }
 };
 
-// Validation utilities
+// Enhanced validation utilities
 export const validateAmount = (amount) => {
   if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
-    throw new Error("Invalid amount provided");
+    throw new Error(
+      "Invalid amount provided: amount must be a positive number"
+    );
   }
   return true;
 };
 
-// Usage example in your components:
-/*
-import { paymentAPI, orderAPI } from '../config/api';
+// New utility for retrying failed requests
+export const retryRequest = async (fn, retries = 3, delay = 1000) => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries === 0) throw error;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    return retryRequest(fn, retries - 1, delay * 2);
+  }
+};
 
-// Creating a payment intent
-try {
-  const { clientSecret } = await paymentAPI.createPaymentIntent(1000);
-  // Use client secret with Stripe
-} catch (error) {
-  console.error('Payment intent creation failed:', error.message);
-}
-
-// Creating an order
-try {
-  const orderResult = await orderAPI.create({
-    // order data
-  });
-  console.log('Order created:', orderResult);
-} catch (error) {
-  console.error('Order creation failed:', error.message);
-}
-*/
+// Export environment information
+export const getEnvironmentInfo = () => ({
+  apiUrl: API_BASE_URL,
+  environment: process.env.NODE_ENV,
+  version: process.env.REACT_APP_VERSION,
+});
