@@ -4,7 +4,7 @@ const helmet = require("helmet");
 const mongoose = require("mongoose");
 const orderRoutes = require("./routes/orderRoutes.js");
 const menuRoutes = require("./routes/menuRoutes.js");
-const reservationRoutes = require("./routes/ReservationRoutes.js");
+const reservationRoutes = require("./routes/reservationRoutes.js");
 const morgan = require("morgan");
 require("dotenv").config();
 
