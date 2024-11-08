@@ -149,6 +149,11 @@ function MenuPage() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchMenu();
+  }, [fetchMenu]);
+
   // Handle view more details
   const handleDishClick = (dish) => {
     setSelectedDish(dish);
