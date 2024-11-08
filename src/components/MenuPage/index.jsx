@@ -114,24 +114,32 @@ function MenuPage() {
       setMenuLoading(true);
       setMenuError(false);
 
-      // Check API health first
-      const health = await checkAPIHealth();
-      if (!health.isHealthy) {
-        throw new Error("API is not available");
+      // Log the full URL for debugging
+      const apiUrl = `${process.env.REACT_APP_API_BASE_URL}/api/menu`;
+      console.log("Fetching menu from:", apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Remove credentials if not needed for now
+        // credentials: "include",
+      });
+
+      // Log response details for debugging
+      console.log("Response status:", response.status);
+      console.log("Content type:", response.headers.get("content-type"));
+
+      // Check if response is OK
+      if (!response.ok) {
+        const text = await response.text();
+        console.log("Error response body:", text);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/api/menu`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        }
-      );
-
       const data = await response.json();
+      console.log("Received data:", data);
 
       if (data.status === "success") {
         setMenuItems(data.data);

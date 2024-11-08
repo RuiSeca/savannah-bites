@@ -20,15 +20,15 @@ app.use(morgan("dev"));
 app.use(
   cors({
     origin: [
-      "https://savannah-bites.onrender.com", // Your frontend Render URL
-      "http://localhost:3000", // Local development
+      "https://savannahbites.onrender.com", // Your frontend Render URL
+      "https://savannah-bites.onrender.com", // Alternative frontend URL format
+      "http://localhost:3000", // Local development URL
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "stripe-signature"],
   })
 );
-
 app.options("*", cors()); // Enable pre-flight for all routes
 
 // Security middleware
