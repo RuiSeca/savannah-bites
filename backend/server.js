@@ -2,9 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const mongoose = require("mongoose");
-const orderRoutes = require("./routes/orderRoutes");
-const menuRoutes = require("./routes/menuRoutes");
-const reservationRoutes = require("./routes/ReservationRoutes");
+const orderRoutes = require("./routes/orderRoutes.js");
+const menuRoutes = require("./routes/menuRoutes.js");
+const reservationRoutes = require("./routes/ReservationRoutes.js");
 const morgan = require("morgan");
 require("dotenv").config();
 
