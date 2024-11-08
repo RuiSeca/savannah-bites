@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { Elements } from "@stripe/react-stripe-js";
 import {
   PaymentElement,
@@ -10,25 +9,11 @@ import { loadStripe } from "@stripe/stripe-js";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import ProgressSteps from "../ProgressSteps/index.jsx";
+import { paymentAPI } from "../../config/api"; // Only import what you need
 import "./styles.css";
 
 // Stripe initialization
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
-
-// API configuration
-const apiUrl =
-  process.env.NODE_ENV === "development"
-    ? process.env.REACT_APP_NGROK_URL || process.env.REACT_APP_API_BASE_URL
-    : process.env.REACT_APP_API_BASE_URL;
-
-// Create axios instance with proper URL construction
-const api = axios.create({
-  baseURL: apiUrl.endsWith("/api") ? apiUrl : `${apiUrl}/api`,
-  withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
 
 const DELIVERY_FEE = 2.5;
 
@@ -88,19 +73,13 @@ function CheckoutForm() {
       };
 
       console.log("Sending order data:", orderData);
-      const response = await api.post("/orders", orderData);
-      console.log("Order created successfully:", response.data);
-      return response.data;
+      const response = await paymentAPI.createOrder(orderData);
+      console.log("Order created successfully:", response);
+      return response;
     } catch (error) {
       console.error("Order creation failed:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
       throw new Error(
-        "Failed to create order: " +
-          (error.response?.data?.message || error.message)
+        "Failed to create order: " + (error.data?.message || error.message)
       );
     }
   };
@@ -305,9 +284,9 @@ function PaymentPage() {
     const createPaymentIntent = async () => {
       try {
         console.log("Creating payment intent...");
-        console.log("API URL:", api.defaults.baseURL);
 
-        const response = await api.post("/orders/create-payment-intent", {
+        // Use the paymentAPI method instead of direct axios call
+        const response = await paymentAPI.createPaymentIntent({
           amount: orderDetails.totalAmount,
           currency: "gbp",
           metadata: {
@@ -316,18 +295,17 @@ function PaymentPage() {
           },
         });
 
-        console.log("Payment intent created:", response.data);
-        setClientSecret(response.data.clientSecret);
+        console.log("Payment intent created:", response);
+
+        // The response is already processed by your API layer
+        setClientSecret(response.clientSecret);
       } catch (error) {
         console.error("Payment setup error:", error);
-        console.error("Error details:", {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          config: error.config,
-        });
+
+        // Error is already formatted by your API layer
         setError(
-          error.response?.data?.message ||
+          error.data?.message ||
+            error.message ||
             "Failed to setup payment. Please try again."
         );
       }

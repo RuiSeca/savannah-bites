@@ -16,15 +16,12 @@ const app = express();
 // Logging middleware
 app.use(morgan("dev"));
 
-// Simple CORS configuration for development
+// Update CORS configuration in server.js
 app.use(
   cors({
     origin: [
-      "http://localhost:3000",
-      "http://localhost:5000",
-      "http://10.77.228.19:3000",
-      "https://e262-194-35-122-157.ngrok-free.app",
-      "https://savannah-bites.onrender.com",
+      "https://savannah-bites.onrender.com", // Your frontend Render URL
+      "http://localhost:3000", // Local development
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],

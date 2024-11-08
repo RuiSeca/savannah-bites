@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import axios from "axios";
 import "./styles.css";
 import { useCart } from "../../context/CartContext";
+import { checkAPIHealth } from "../../config/api";
 
 // Import images
 import suyaSkewersImage from "../../images/suya-skewers.png";
@@ -28,17 +28,6 @@ import summersBeerImage from "../../images/apple-somersby.jpg";
 import superBockImage from "../../images/super-bock.jpg";
 import stellaImage from "../../images/stella-artois.jpg";
 import cucaImage from "../../images/cuca.jpg"; // Added for Cuca
-
-// Configure axios
-axios.defaults.withCredentials = true;
-
-// Define API URL
-const apiUrl =
-  process.env.NODE_ENV === "development"
-    ? process.env.REACT_APP_NGROK_URL || process.env.REACT_APP_API_BASE_URL
-    : process.env.REACT_APP_API_BASE_URL;
-
-console.log("Using API URL:", apiUrl);
 
 // Image mapping
 const images = {
@@ -125,48 +114,40 @@ function MenuPage() {
       setMenuLoading(true);
       setMenuError(false);
 
-      // Construct the URL properly
-      const baseUrl = apiUrl.endsWith("/api") ? apiUrl : `${apiUrl}/api`;
-      const menuUrl = `${baseUrl}/menu`;
+      // Check API health first
+      const health = await checkAPIHealth();
+      if (!health.isHealthy) {
+        throw new Error("API is not available");
+      }
 
-      console.log("Fetching from:", menuUrl); // Debug log
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/api/menu`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
 
-      const response = await axios({
-        method: "get",
-        url: menuUrl,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-        timeout: 5000,
-      });
+      const data = await response.json();
 
-      if (response.data.status === "success") {
-        setMenuItems(response.data.data);
+      if (data.status === "success") {
+        setMenuItems(data.data);
       } else {
-        throw new Error(response.data.message || "Failed to fetch menu data");
+        throw new Error(data.message || "Failed to fetch menu data");
       }
     } catch (error) {
       console.error("Error fetching menu items:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response,
-        config: error.config,
-      });
-
       setMenuError(true);
       setMenuErrorMessage(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to load menu items. Please check your connection."
+        error.data?.message || error.message || "Failed to load menu items"
       );
     } finally {
       setMenuLoading(false);
     }
   }, []);
-  useEffect(() => {
-    fetchMenu();
-  }, [fetchMenu]);
 
   // Handle view more details
   const handleDishClick = (dish) => {
