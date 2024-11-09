@@ -107,6 +107,23 @@ function CheckoutPage() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Validation function for delivery time
+  const validateDeliveryTime = useCallback((deliveryTime) => {
+    if (!deliveryTime) {
+      return "Please select a delivery time";
+    }
+
+    const [hours, minutes] = deliveryTime.split(":").map(Number);
+    const deliveryDateTime = new Date();
+    deliveryDateTime.setHours(hours, minutes, 0, 0);
+
+    if (deliveryDateTime <= new Date()) {
+      return "Please select a future delivery time";
+    }
+
+    return null;
+  }, []);
+
   // Format phone number as user types
   const formatPhoneNumber = useCallback((value) => {
     const phoneNumber = value.replace(/\D/g, "");
@@ -205,7 +222,7 @@ function CheckoutPage() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData, subtotal, cart]);
+  }, [formData, subtotal, cart, validateDeliveryTime]);
 
   // Quantity handlers
   const handleQuantityChange = useCallback(
