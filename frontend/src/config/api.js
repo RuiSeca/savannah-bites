@@ -1,25 +1,8 @@
 // src/config/api.js
 import axios from "axios";
 
-// Environment and Configuration
-const API_CONFIG = {
-  baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api",
-  timeout: 15000,
-  retryAttempts: 3,
-  retryDelay: 1000,
-  environment: process.env.NODE_ENV,
-  version: process.env.REACT_APP_VERSION,
-};
-
-// Error Classes
+// Custom Error Class
 class APIError extends Error {
-  /*************  ✨ Codeium Command 🌟  *************/
-  /**
-   * Custom error class for API-related errors
-   * @param {String} message - Error message
-   * @param {Number} status - HTTP status code
-   * @param {Object} data - Additional error data
-   */
   constructor(message, status, data) {
     super(message);
     this.name = "APIError";
@@ -29,8 +12,16 @@ class APIError extends Error {
   }
 }
 
+// Environment and Configuration
+const API_CONFIG = {
+  baseURL: process.env.REACT_APP_API_BASE_URL,
+  timeout: 15000,
+  retryAttempts: 3,
+  retryDelay: 1000,
+  environment: process.env.NODE_ENV,
+};
+
 // Validation Functions
-/******  fd8b752a-3588-4b2f-82d0-c1943b393113  *******/
 const validateAmount = (amount) => {
   if (!amount || typeof amount !== "number" || isNaN(amount) || amount <= 0) {
     throw new Error(
@@ -44,11 +35,9 @@ const validateAmount = (amount) => {
 };
 
 const validateOrderData = (orderData) => {
-  const errors = [];
+  if (!orderData) throw new Error("Order data is required");
 
-  if (!orderData) {
-    throw new Error("Order data is required");
-  }
+  const errors = [];
 
   // Validate items
   if (
@@ -61,17 +50,30 @@ const validateOrderData = (orderData) => {
   }
 
   // Validate customer info
-  const customerInfo = orderData.orderDetails?.customerInfo;
+  const customerInfo = orderData.orderDetails?.customer;
   if (!customerInfo) {
     errors.push("Customer information is required");
   } else {
-    const { name, email, phone, address, city, postcode } = customerInfo;
+    const { name, email, phone } = customerInfo;
     if (!name) errors.push("Customer name is required");
     if (!email) errors.push("Customer email is required");
     if (!phone) errors.push("Customer phone is required");
-    if (!address) errors.push("Delivery address is required");
+  }
+
+  // Validate address
+  const address = orderData.orderDetails?.address;
+  if (!address) {
+    errors.push("Delivery address is required");
+  } else {
+    const { street, city, postcode } = address;
+    if (!street) errors.push("Street address is required");
     if (!city) errors.push("City is required");
     if (!postcode) errors.push("Postcode is required");
+  }
+
+  // Validate delivery time
+  if (!orderData.orderDetails?.deliveryTime?.requested) {
+    errors.push("Delivery time is required");
   }
 
   if (errors.length > 0) {
@@ -137,21 +139,12 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
 
-    // Error handling
-    if (error.response) {
-      console.error("API Response Error:", {
-        status: error.response.status,
-        data: error.response.data,
-        url: originalRequest.url,
-      });
-    } else if (error.request) {
-      console.error("API No Response:", {
-        request: error.request,
-        url: originalRequest.url,
-      });
-    } else {
-      console.error("API Request Setup Error:", error.message);
-    }
+    console.error("API Error:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      url: originalRequest?.url,
+    });
 
     return Promise.reject(
       new APIError(
@@ -169,12 +162,6 @@ export const paymentAPI = {
     try {
       validateAmount(data.amount);
 
-      console.log("Creating payment intent with data:", {
-        amount: data.amount,
-        currency: data.currency || "gbp",
-      });
-
-      // Update the endpoint path to include /api
       const response = await api.post("/api/orders/create-payment-intent", {
         amount: data.amount,
         currency: data.currency || "gbp",
@@ -192,7 +179,7 @@ export const paymentAPI = {
 
       return response.data;
     } catch (error) {
-      console.error("Payment API Error:", error);
+      console.error("Payment Intent Creation Error:", error);
       throw error instanceof APIError
         ? error
         : new APIError(
@@ -203,10 +190,11 @@ export const paymentAPI = {
     }
   },
 
-  createOrder: async (data) => {
+  createOrder: async (orderData) => {
     try {
-      console.log("Creating order with data:", data);
-      const response = await api.post("/orders", data);
+      validateOrderData(orderData);
+
+      const response = await api.post("/api/orders", orderData);
 
       if (!response.data?.orderId) {
         throw new Error("Order creation failed: No order ID received");
@@ -218,25 +206,24 @@ export const paymentAPI = {
       };
     } catch (error) {
       console.error("Order Creation Error:", error);
-      throw new APIError(
-        error.response?.data?.message || error.message,
-        error.response?.status || 500,
-        error.response?.data
-      );
+      throw error instanceof APIError
+        ? error
+        : new APIError(
+            error.message,
+            error.response?.status || 500,
+            error.response?.data
+          );
     }
   },
-};
 
-// Order API
-export const orderAPI = {
-  getStatus: async (orderId) => {
+  getOrder: async (orderId) => {
     try {
       if (!orderId) throw new Error("Order ID is required");
 
-      const response = await api.get(`/orders/${orderId}`);
+      const response = await api.get(`/api/orders/${orderId}`);
       return response.data;
     } catch (error) {
-      console.error("Order Status Check Error:", error);
+      console.error("Get Order Error:", error);
       throw error instanceof APIError
         ? error
         : new APIError(
@@ -247,28 +234,14 @@ export const orderAPI = {
     }
   },
 
-  getHistory: async () => {
-    try {
-      const response = await api.get("/orders/history");
-      return response.data;
-    } catch (error) {
-      console.error("Order History Error:", error);
-      throw error instanceof APIError
-        ? error
-        : new APIError(
-            error.message,
-            error.response?.status || 500,
-            error.response?.data
-          );
-    }
-  },
-
-  updateStatus: async (orderId, status) => {
+  updateOrderStatus: async (orderId, status) => {
     try {
       if (!orderId) throw new Error("Order ID is required");
       if (!status) throw new Error("Status is required");
 
-      const response = await api.put(`/orders/${orderId}/status`, { status });
+      const response = await api.patch(`/api/orders/${orderId}/status`, {
+        status,
+      });
       return response.data;
     } catch (error) {
       console.error("Order Status Update Error:", error);
@@ -282,11 +255,13 @@ export const orderAPI = {
     }
   },
 
-  cancel: async (orderId, reason) => {
+  cancelOrder: async (orderId, reason) => {
     try {
       if (!orderId) throw new Error("Order ID is required");
 
-      const response = await api.post(`/orders/${orderId}/cancel`, { reason });
+      const response = await api.post(`/api/orders/${orderId}/cancel`, {
+        reason,
+      });
       return response.data;
     } catch (error) {
       console.error("Order Cancellation Error:", error);
@@ -305,7 +280,7 @@ export const orderAPI = {
 export const checkAPIHealth = async () => {
   try {
     const startTime = Date.now();
-    const response = await api.get("/health");
+    const response = await api.get("/api/health");
     const endTime = Date.now();
 
     return {
@@ -314,7 +289,6 @@ export const checkAPIHealth = async () => {
       status: response.data.status,
       timestamp: new Date().toISOString(),
       environment: API_CONFIG.environment,
-      version: API_CONFIG.version,
     };
   } catch (error) {
     return {
@@ -322,7 +296,6 @@ export const checkAPIHealth = async () => {
       error: error.message,
       timestamp: new Date().toISOString(),
       environment: API_CONFIG.environment,
-      version: API_CONFIG.version,
     };
   }
 };
@@ -348,8 +321,8 @@ export const getAPIConfig = () => ({
 });
 
 export default {
+  api,
   paymentAPI,
-  orderAPI,
   checkAPIHealth,
   retryRequest,
   getAPIConfig,

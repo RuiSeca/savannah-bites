@@ -145,70 +145,51 @@ function CheckoutForm({ orderDetails, clientSecret }) {
         }
 
         validateCustomerInfo(orderDetails.customerInfo);
-
-        // Calculate totals
         const totals = validateCartAndCalculateTotals(cart);
 
         const orderData = {
-          customer: {
-            name: orderDetails.customerInfo.name,
-            email: orderDetails.customerInfo.email.toLowerCase().trim(),
-            phone: orderDetails.customerInfo.phone,
-          },
-          orderDetails: cart.map((item) => ({
-            item: item._id || item.id,
-            name: item.name,
-            quantity: parseInt(item.quantity, 10),
-            price: Number(item.selectedPrice || item.price),
-            size: item.size || "regular",
-            modifiers: item.modifiers || [],
-          })),
-          address: {
-            street: orderDetails.customerInfo.address.trim(),
-            city: orderDetails.customerInfo.city.trim(),
-            postcode: orderDetails.customerInfo.postcode.trim().toUpperCase(),
-          },
-          amount: {
-            subtotal: totals.subtotal,
-            deliveryFee: totals.deliveryFee,
-            total: totals.total,
-            discount: 0,
-          },
-          paymentDetails: {
-            paymentIntentId: paymentIntent.id,
-            method: "card",
-            status: paymentIntent.status,
-          },
-          deliveryTime: {
-            requested: parseDeliveryDateTime(
-              orderDetails.customerInfo.deliveryTime
-            ),
-          },
-          specialInstructions:
-            orderDetails.customerInfo.specialInstructions || "",
-          orderStatus: {
-            current: "pending",
-            history: [
-              {
-                status: "pending",
-                timestamp: new Date(),
-                note: "Order placed",
-                updatedBy: "customer",
-              },
-            ],
+          paymentIntentId: paymentIntent.id,
+          orderDetails: {
+            customer: {
+              name: orderDetails.customerInfo.name,
+              email: orderDetails.customerInfo.email.toLowerCase().trim(),
+              phone: orderDetails.customerInfo.phone,
+            },
+            items: cart.map((item) => ({
+              item: item._id || item.id,
+              name: item.name,
+              quantity: parseInt(item.quantity, 10),
+              price: Number(item.selectedPrice || item.price),
+              size: item.size || "regular",
+            })),
+            address: {
+              street: orderDetails.customerInfo.address.trim(),
+              city: orderDetails.customerInfo.city.trim(),
+              postcode: orderDetails.customerInfo.postcode.trim().toUpperCase(),
+            },
+            amount: {
+              subtotal: totals.subtotal,
+              deliveryFee: totals.deliveryFee,
+              total: totals.total,
+              discount: 0,
+            },
+            deliveryTime: {
+              requested: parseDeliveryDateTime(
+                orderDetails.customerInfo.deliveryTime
+              ),
+            },
+            specialInstructions:
+              orderDetails.customerInfo.specialInstructions || "",
           },
         };
 
         console.log("Sending order data:", orderData);
-        const response = await paymentAPI.createOrder({
-          paymentIntentId: paymentIntent.id,
-          orderDetails: orderData,
-        });
+        const response = await paymentAPI.createOrder(orderData);
         console.log("Order created successfully:", response);
         return response;
       } catch (error) {
         console.error("Order creation failed:", error);
-        throw new Error(error.data?.message || error.message);
+        throw error;
       }
     },
     [cart, orderDetails]
