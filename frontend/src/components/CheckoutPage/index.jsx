@@ -149,28 +149,6 @@ function CheckoutPage() {
     };
   }, [cart]);
 
-  if (!formData.deliveryTime) {
-    newErrors.deliveryTime = "Please select a delivery time";
-  } else {
-    const [hours, minutes] = formData.deliveryTime.split(":").map(Number);
-    const deliveryTime = new Date();
-    deliveryTime.setHours(hours, minutes, 0, 0);
-
-    if (deliveryTime <= new Date()) {
-      newErrors.deliveryTime = "Please select a future delivery time";
-    }
-  }
-
-  // Quantity handlers
-  const handleQuantityChange = useCallback(
-    (itemId, newQuantity, size) => {
-      if (newQuantity >= 1) {
-        updateQuantity(itemId, newQuantity, size);
-      }
-    },
-    [updateQuantity]
-  );
-
   // Validate form data
   const validateForm = useCallback(() => {
     const newErrors = {};
@@ -210,8 +188,9 @@ function CheckoutPage() {
     }
 
     // Delivery time validation
-    if (!formData.deliveryTime) {
-      newErrors.deliveryTime = "Please select a delivery time";
+    const deliveryTimeError = validateDeliveryTime(formData.deliveryTime);
+    if (deliveryTimeError) {
+      newErrors.deliveryTime = deliveryTimeError;
     }
 
     // Order amount validation
@@ -227,6 +206,16 @@ function CheckoutPage() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData, subtotal, cart]);
+
+  // Quantity handlers
+  const handleQuantityChange = useCallback(
+    (itemId, newQuantity, size) => {
+      if (newQuantity >= 1) {
+        updateQuantity(itemId, newQuantity, size);
+      }
+    },
+    [updateQuantity]
+  );
 
   // Handle form submission
   const handleSubmit = useCallback(
