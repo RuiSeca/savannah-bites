@@ -233,29 +233,38 @@ function CheckoutPage() {
       try {
         setIsSubmitting(true);
 
+        // Calculate totals here to ensure consistency
+        const subtotal = cart.reduce((total, item) => {
+          const price = Number(item.selectedPrice || item.price);
+          return total + price * item.quantity;
+        }, 0);
+
+        const totalAmount = subtotal + DELIVERY_FEE;
+        const amountInCents = Math.round(totalAmount * 100);
+
         navigate("/payment", {
           state: {
             orderDetails: {
               items: cart.map((item) => ({
                 id: item.id,
                 name: item.name,
-                quantity: item.quantity,
-                price: item.selectedPrice || item.price,
+                quantity: parseInt(item.quantity, 10),
+                price: Number(item.selectedPrice || item.price),
                 size: item.size || "regular",
               })),
               customerInfo: {
-                name: formData.name,
-                email: formData.email,
+                name: formData.name.trim(),
+                email: formData.email.toLowerCase().trim(),
                 phone: formData.phone,
-                address: formData.street,
-                city: formData.city,
-                postcode: formData.postcode.toUpperCase(),
+                address: formData.street.trim(),
+                city: formData.city.trim(),
+                postcode: formData.postcode.toUpperCase().trim(),
                 deliveryTime: formData.deliveryTime,
-                specialInstructions: formData.specialInstructions,
+                specialInstructions: formData.specialInstructions.trim(),
               },
-              subtotal,
+              subtotal: Number(subtotal.toFixed(2)),
               deliveryFee: DELIVERY_FEE,
-              totalAmount: totalPrice,
+              totalAmount: amountInCents, // Send amount in cents
               orderDate: new Date().toISOString(),
             },
           },
@@ -270,7 +279,7 @@ function CheckoutPage() {
         setIsSubmitting(false);
       }
     },
-    [cart, formData, subtotal, totalPrice, navigate, validateForm]
+    [cart, formData, navigate, validateForm]
   );
 
   // Empty cart view

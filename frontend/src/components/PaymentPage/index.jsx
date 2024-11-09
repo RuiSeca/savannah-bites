@@ -91,21 +91,17 @@ function CheckoutForm() {
 
   const createOrder = async (paymentIntent) => {
     try {
-      const { subtotal, deliveryFee, amountInCents } = calculateTotals(cart);
-
       const orderData = {
         paymentIntentId: paymentIntent.id,
         orderDetails: {
           items: cart.map((item) => ({
             id: item._id || item.id,
             name: item.name,
-            quantity: item.quantity,
-            price: item.selectedPrice || item.price,
+            quantity: parseInt(item.quantity, 10),
+            price: Number(item.selectedPrice || item.price),
             size: item.size || "regular",
           })),
-          subtotal,
-          deliveryFee,
-          totalAmount: amountInCents,
+          ...orderDetails,
           customerInfo: orderDetails.customerInfo,
         },
       };
@@ -302,6 +298,7 @@ function CheckoutForm() {
 function PaymentPage() {
   const [clientSecret, setClientSecret] = useState("");
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const { cart } = useCart();
@@ -311,15 +308,19 @@ function PaymentPage() {
   useEffect(() => {
     const initializePayment = async () => {
       try {
+        setLoading(true);
+
         if (!cart?.length || !orderDetails?.customerInfo) {
           throw new Error("Missing required payment information");
         }
 
-        const totals = calculateTotals(cart);
-        console.log("Sending to API - amount in cents:", totals.amountInCents);
+        // Use the amount that was already calculated in checkout
+        const amount = orderDetails.totalAmount;
+
+        console.log("Creating payment intent with amount:", amount);
 
         const response = await paymentAPI.createPaymentIntent({
-          amount: totals.amountInCents, // This is already in cents
+          amount: amount, // Already in cents from checkout
           currency: "gbp",
           metadata: {
             customerName: orderDetails.customerInfo.name,
@@ -327,10 +328,18 @@ function PaymentPage() {
           },
         });
 
+        if (!response.clientSecret) {
+          throw new Error(
+            "No client secret received from payment intent creation"
+          );
+        }
+
         setClientSecret(response.clientSecret);
       } catch (error) {
         console.error("Payment initialization failed:", error);
         setError(error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -349,7 +358,7 @@ function PaymentPage() {
     );
   }
 
-  if (!clientSecret) {
+  if (loading || !clientSecret) {
     return (
       <div className="loading-container" role="status">
         <div className="spinner" />

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import "./styles.css";
 import { useCart } from "../../context/CartContext";
+import api from "../../config/api";
 
 // Import images
 import suyaSkewersImage from "../../images/suya-skewers.png";
