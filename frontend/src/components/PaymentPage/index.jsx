@@ -45,8 +45,10 @@ const validateCartAndCalculateTotals = (cart) => {
   });
 
   // Calculate totals
-  const subtotal = itemTotals.reduce((sum, total) => sum + total, 0);
-  const total = subtotal + DELIVERY_FEE;
+  const subtotal = Number(
+    itemTotals.reduce((sum, total) => sum + total, 0).toFixed(2)
+  );
+  const total = Number((subtotal + DELIVERY_FEE).toFixed(2));
   const amountInCents = Math.round(total * 100);
 
   console.log("Payment calculations:", {
@@ -64,7 +66,61 @@ const validateCartAndCalculateTotals = (cart) => {
   };
 };
 
-function CheckoutForm({ orderDetails }) {
+const validateCustomerInfo = (customerInfo) => {
+  if (!customerInfo) throw new Error("Customer information is required");
+
+  const requiredFields = [
+    "name",
+    "email",
+    "phone",
+    "address",
+    "city",
+    "postcode",
+    "deliveryTime",
+  ];
+
+  const missingFields = requiredFields.filter((field) => !customerInfo[field]);
+  if (missingFields.length > 0) {
+    throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(customerInfo.email)) {
+    throw new Error("Invalid email format");
+  }
+
+  // Validate UK postcode
+  const postcodeRegex = /^[A-Z]{1,2}[0-9][A-Z0-9]?\s?[0-9][A-Z]{2}$/i;
+  if (!postcodeRegex.test(customerInfo.postcode.trim())) {
+    throw new Error("Invalid UK postcode format");
+  }
+
+  // Validate phone number
+  const phoneRegex = /^[\d\s-+()]{10,}$/;
+  if (!phoneRegex.test(customerInfo.phone.replace(/\s+/g, ""))) {
+    throw new Error("Invalid phone number format");
+  }
+};
+
+const parseDeliveryDateTime = (timeString) => {
+  try {
+    const [hours, minutes] = timeString.split(":").map(Number);
+    const deliveryDate = new Date();
+    deliveryDate.setHours(hours, minutes, 0, 0);
+
+    // If the time has already passed today, set it for tomorrow
+    if (deliveryDate <= new Date()) {
+      deliveryDate.setDate(deliveryDate.getDate() + 1);
+    }
+
+    return deliveryDate;
+  } catch (error) {
+    throw new Error("Invalid delivery time format");
+  }
+};
+
+function CheckoutForm({ orderDetails, clientSecret }) {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
@@ -82,52 +138,77 @@ function CheckoutForm({ orderDetails }) {
   const createOrder = useCallback(
     async (paymentIntent) => {
       try {
-        console.log("Cart data:", cart);
-        console.log("Order details:", orderDetails);
+        console.log("Creating order with payment intent:", paymentIntent.id);
 
-        if (!cart || !Array.isArray(cart) || cart.length === 0) {
+        if (!cart?.length) {
           throw new Error("Cart is empty or invalid");
         }
 
-        if (!orderDetails?.customerInfo) {
-          throw new Error("Customer information is missing");
-        }
+        validateCustomerInfo(orderDetails.customerInfo);
 
-        const validatedItems = cart.map((item) => ({
-          id: item._id || item.id,
-          name: item.name,
-          quantity: parseInt(item.quantity, 10),
-          price: Number(item.selectedPrice || item.price),
-          size: item.size || "regular",
-        }));
+        // Calculate totals
+        const totals = validateCartAndCalculateTotals(cart);
 
         const orderData = {
-          paymentIntentId: paymentIntent.id,
-          orderDetails: {
-            items: validatedItems,
-            customerInfo: {
-              name: orderDetails.customerInfo.name,
-              email: orderDetails.customerInfo.email,
-              phone: orderDetails.customerInfo.phone,
-              address: orderDetails.customerInfo.address,
-              city: orderDetails.customerInfo.city,
-              postcode: orderDetails.customerInfo.postcode,
-              deliveryTime: orderDetails.customerInfo.deliveryTime,
-              specialInstructions:
-                orderDetails.customerInfo.specialInstructions || "",
-            },
+          customer: {
+            name: orderDetails.customerInfo.name,
+            email: orderDetails.customerInfo.email.toLowerCase().trim(),
+            phone: orderDetails.customerInfo.phone,
+          },
+          orderDetails: cart.map((item) => ({
+            item: item._id || item.id,
+            name: item.name,
+            quantity: parseInt(item.quantity, 10),
+            price: Number(item.selectedPrice || item.price),
+            size: item.size || "regular",
+            modifiers: item.modifiers || [],
+          })),
+          address: {
+            street: orderDetails.customerInfo.address.trim(),
+            city: orderDetails.customerInfo.city.trim(),
+            postcode: orderDetails.customerInfo.postcode.trim().toUpperCase(),
+          },
+          amount: {
+            subtotal: totals.subtotal,
+            deliveryFee: totals.deliveryFee,
+            total: totals.total,
+            discount: 0,
+          },
+          paymentDetails: {
+            paymentIntentId: paymentIntent.id,
+            method: "card",
+            status: paymentIntent.status,
+          },
+          deliveryTime: {
+            requested: parseDeliveryDateTime(
+              orderDetails.customerInfo.deliveryTime
+            ),
+          },
+          specialInstructions:
+            orderDetails.customerInfo.specialInstructions || "",
+          orderStatus: {
+            current: "pending",
+            history: [
+              {
+                status: "pending",
+                timestamp: new Date(),
+                note: "Order placed",
+                updatedBy: "customer",
+              },
+            ],
           },
         };
 
         console.log("Sending order data:", orderData);
-        const response = await paymentAPI.createOrder(orderData);
+        const response = await paymentAPI.createOrder({
+          paymentIntentId: paymentIntent.id,
+          orderDetails: orderData,
+        });
         console.log("Order created successfully:", response);
         return response;
       } catch (error) {
         console.error("Order creation failed:", error);
-        throw new Error(
-          "Failed to create order: " + (error.data?.message || error.message)
-        );
+        throw new Error(error.data?.message || error.message);
       }
     },
     [cart, orderDetails]
@@ -144,16 +225,22 @@ function CheckoutForm({ orderDetails }) {
       setIsProcessing(true);
       setError(null);
 
-      validateCartAndCalculateTotals(cart);
+      // Get the payment intent status before confirming
+      const { paymentIntent: currentIntent } =
+        await stripe.retrievePaymentIntent(clientSecret);
+      console.log("Current payment intent status:", currentIntent.status);
 
+      // Submit the form data first
       const { error: submitError } = await elements.submit();
       if (submitError) {
-        throw submitError;
+        throw new Error(`Payment submission failed: ${submitError.message}`);
       }
 
+      // Confirm the payment
       const { error: paymentError, paymentIntent } =
         await stripe.confirmPayment({
           elements,
+          redirect: "if_required",
           confirmParams: {
             return_url: `${window.location.origin}/confirmation`,
             payment_method_data: {
@@ -170,28 +257,41 @@ function CheckoutForm({ orderDetails }) {
               },
             },
           },
-          redirect: "if_required",
         });
 
       if (paymentError) {
-        throw paymentError;
+        console.error("Payment confirmation error:", paymentError);
+        throw new Error(paymentError.message || "Payment failed");
+      }
+
+      if (!paymentIntent) {
+        throw new Error("No payment intent returned");
       }
 
       if (paymentIntent.status === "succeeded") {
-        const { orderId } = await createOrder(paymentIntent);
-        clearCart();
-        navigate("/confirmation", {
-          state: {
-            orderId,
-            status: "success",
-            paymentIntentId: paymentIntent.id,
-          },
-          replace: true,
-        });
+        try {
+          const { orderId } = await createOrder(paymentIntent);
+          clearCart();
+          navigate("/confirmation", {
+            state: {
+              orderId,
+              status: "success",
+              paymentIntentId: paymentIntent.id,
+            },
+            replace: true,
+          });
+        } catch (orderError) {
+          console.error("Order creation error:", orderError);
+          throw new Error(
+            `Payment successful but order creation failed: ${orderError.message}`
+          );
+        }
+      } else {
+        throw new Error(`Unexpected payment status: ${paymentIntent.status}`);
       }
     } catch (error) {
       console.error("Payment/Order error:", error);
-      setError(error.message);
+      setError(error.message || "Payment processing failed");
     } finally {
       setIsProcessing(false);
     }
@@ -332,9 +432,15 @@ function PaymentPage() {
       try {
         setLoading(true);
 
-        if (!cart?.length || !orderDetails?.customerInfo) {
-          throw new Error("Missing required payment information");
+        if (!cart?.length) {
+          throw new Error("Your cart is empty");
         }
+
+        if (!orderDetails?.customerInfo) {
+          throw new Error("Please complete your delivery information");
+        }
+
+        validateCustomerInfo(orderDetails.customerInfo);
 
         const { amountInCents } = validateCartAndCalculateTotals(cart);
         console.log("Creating payment intent with amount:", amountInCents);
@@ -345,6 +451,7 @@ function PaymentPage() {
           metadata: {
             customerName: orderDetails.customerInfo.name,
             customerEmail: orderDetails.customerInfo.email,
+            integration_check: "accept_a_payment",
           },
         });
 
@@ -354,10 +461,12 @@ function PaymentPage() {
           );
         }
 
+        console.log("Payment intent created successfully");
         setClientSecret(response.clientSecret);
       } catch (error) {
         console.error("Payment initialization failed:", error);
-        setError(error.message);
+        setError(error.message || "Failed to initialize payment");
+        navigate("/checkout");
       } finally {
         setLoading(false);
       }
@@ -401,6 +510,7 @@ function PaymentPage() {
               colorText: "#30313d",
             },
           },
+          loader: "auto",
         }}
       >
         <CheckoutForm orderDetails={orderDetails} />
