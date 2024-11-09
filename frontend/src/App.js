@@ -8,7 +8,7 @@ import {
 import { CartProvider } from "./context/CartContext";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import ScrollToTop from "./components/ScrollToTopButton";
+import ScrollToTopButton from "./components/ScrollToTopButton";
 
 import "./App.css";
 
@@ -59,6 +59,8 @@ function AppContent() {
           <Navigation />
         </Suspense>
       )}
+
+      <ScrollToTopButton />
 
       <main className="main-content">
         <Suspense fallback={<LoadingSpinner />}>
@@ -117,8 +119,7 @@ function App() {
     <Router>
       <CartProvider>
         <Elements stripe={stripePromise}>
-          <Routes>{/* Your app routes here */}</Routes>
-          <ScrollToTopButton />
+          <AppContent />
         </Elements>
       </CartProvider>
     </Router>
