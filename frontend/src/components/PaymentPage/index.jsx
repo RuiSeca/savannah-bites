@@ -217,7 +217,7 @@ function CheckoutForm({ orderDetails, clientSecret }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!stripe || !elements || isProcessing) {
+    if (!stripe || !elements || isProcessing || !clientSecret) {
       return;
     }
 
@@ -225,12 +225,11 @@ function CheckoutForm({ orderDetails, clientSecret }) {
       setIsProcessing(true);
       setError(null);
 
-      // Get the payment intent status before confirming
-      const { paymentIntent: currentIntent } =
-        await stripe.retrievePaymentIntent(clientSecret);
-      console.log("Current payment intent status:", currentIntent.status);
+      // Validate cart before proceeding
+      const totals = validateCartAndCalculateTotals(cart);
+      console.log("Processing payment for amount:", totals.amountInCents);
 
-      // Submit the form data first
+      // Submit the form first
       const { error: submitError } = await elements.submit();
       if (submitError) {
         throw new Error(`Payment submission failed: ${submitError.message}`);
@@ -240,7 +239,7 @@ function CheckoutForm({ orderDetails, clientSecret }) {
       const { error: paymentError, paymentIntent } =
         await stripe.confirmPayment({
           elements,
-          redirect: "if_required",
+          clientSecret, // Add this line
           confirmParams: {
             return_url: `${window.location.origin}/confirmation`,
             payment_method_data: {
@@ -264,11 +263,7 @@ function CheckoutForm({ orderDetails, clientSecret }) {
         throw new Error(paymentError.message || "Payment failed");
       }
 
-      if (!paymentIntent) {
-        throw new Error("No payment intent returned");
-      }
-
-      if (paymentIntent.status === "succeeded") {
+      if (paymentIntent && paymentIntent.status === "succeeded") {
         try {
           const { orderId } = await createOrder(paymentIntent);
           clearCart();
@@ -287,7 +282,9 @@ function CheckoutForm({ orderDetails, clientSecret }) {
           );
         }
       } else {
-        throw new Error(`Unexpected payment status: ${paymentIntent.status}`);
+        throw new Error(
+          `Unexpected payment status: ${paymentIntent?.status || "unknown"}`
+        );
       }
     } catch (error) {
       console.error("Payment/Order error:", error);
@@ -498,23 +495,27 @@ function PaymentPage() {
 
   return (
     <div className="payment-page">
-      <Elements
-        stripe={stripePromise}
-        options={{
-          clientSecret,
-          appearance: {
-            theme: "stripe",
-            variables: {
-              colorPrimary: "#0a5c66",
-              colorBackground: "#ffffff",
-              colorText: "#30313d",
+      {!loading && clientSecret && (
+        <Elements
+          stripe={stripePromise}
+          options={{
+            clientSecret,
+            appearance: {
+              theme: "stripe",
+              variables: {
+                colorPrimary: "#0a5c66",
+                colorBackground: "#ffffff",
+                colorText: "#30313d",
+              },
             },
-          },
-          loader: "auto",
-        }}
-      >
-        <CheckoutForm orderDetails={orderDetails} />
-      </Elements>
+          }}
+        >
+          <CheckoutForm
+            orderDetails={orderDetails}
+            clientSecret={clientSecret} // Pass clientSecret here
+          />
+        </Elements>
+      )}
     </div>
   );
 }
