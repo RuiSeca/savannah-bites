@@ -8,70 +8,91 @@ import {
 import { loadStripe } from "@stripe/stripe-js";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
-import ProgressSteps from "../ProgressSteps/index.jsx";
+import ProgressSteps from "../ProgressSteps";
 import { paymentAPI } from "../../config/api";
-import "./styles.css";
+import Spinner from "../Spinner";
+import ErrorBoundary from "../ErrorBoundary";
+import "./PaymentPage.css";
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 const DELIVERY_FEE = 2.5;
 
+// Utility functions
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+  }).format(amount);
+};
+
 const validateCartItem = (item) => {
-  if (!item) throw new Error("Invalid cart item");
-
-  const price = item.selectedPrice || item.price;
-  const quantity = item.quantity;
-
-  if (typeof price !== "number" || price <= 0) {
-    throw new Error(`Invalid price for item: ${item.name}`);
-  }
-  if (!Number.isInteger(quantity) || quantity <= 0) {
-    throw new Error(`Invalid quantity for item: ${item.name}`);
+  if (!item || typeof item !== "object") {
+    throw new Error("Invalid cart item");
   }
 
-  return true;
+  const price = parseFloat(item.selectedPrice || item.price);
+  const quantity = parseInt(item.quantity, 10);
+
+  if (isNaN(price) || price <= 0) {
+    throw new Error(`Invalid price for ${item.name}: ${price}`);
+  }
+  if (isNaN(quantity) || quantity <= 0) {
+    throw new Error(`Invalid quantity for ${item.name}: ${quantity}`);
+  }
+
+  return {
+    price,
+    quantity,
+    total: price * quantity,
+  };
 };
 
 const calculateTotals = (cart) => {
+  console.log("Calculating totals for cart:", cart);
+
   if (!Array.isArray(cart) || cart.length === 0) {
     throw new Error("Cart is empty or invalid");
   }
 
-  const subtotal = cart.reduce((sum, item) => {
-    const price = parseFloat(item.selectedPrice || item.price);
-    const quantity = parseInt(item.quantity, 10);
+  // Calculate totals with validation
+  try {
+    const itemTotals = cart.map((item) => {
+      const validatedItem = validateCartItem(item);
+      console.log(`Validated item ${item.name}:`, validatedItem);
+      return validatedItem.total;
+    });
 
-    if (isNaN(price) || price <= 0) {
-      throw new Error(`Invalid price for item: ${item.name}`);
-    }
-    if (isNaN(quantity) || quantity <= 0) {
-      throw new Error(`Invalid quantity for item: ${item.name}`);
-    }
+    const subtotal = itemTotals.reduce((sum, total) => sum + total, 0);
+    const total = subtotal + DELIVERY_FEE;
+    const amountInCents = Math.round(total * 100);
 
-    return sum + price * quantity;
-  }, 0);
+    console.log("Calculation results:", {
+      subtotal,
+      deliveryFee: DELIVERY_FEE,
+      total,
+      amountInCents,
+    });
 
-  const total = subtotal + DELIVERY_FEE;
-  const amountInCents = Math.round(total * 100); // Convert to cents only once
-
-  return {
-    subtotal,
-    deliveryFee: DELIVERY_FEE,
-    total,
-    amountInCents,
-  };
+    return {
+      subtotal,
+      deliveryFee: DELIVERY_FEE,
+      total,
+      amountInCents,
+    };
+  } catch (error) {
+    console.error("Error calculating totals:", error);
+    throw new Error(`Failed to calculate totals: ${error.message}`);
+  }
 };
 
-function CheckoutForm() {
+function CheckoutForm({ orderDetails }) {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
-  const location = useLocation();
   const { cart, clearCart } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
-
-  const orderDetails = location.state?.orderDetails;
 
   useEffect(() => {
     if (!orderDetails?.customerInfo || !cart?.length) {
@@ -82,6 +103,7 @@ function CheckoutForm() {
 
   const createOrder = async (paymentIntent) => {
     try {
+      console.log("Creating order with payment intent:", paymentIntent.id);
       const { subtotal, deliveryFee, amountInCents } = calculateTotals(cart);
 
       const orderData = {
@@ -94,21 +116,24 @@ function CheckoutForm() {
             price: item.selectedPrice || item.price,
             size: item.size || "regular",
           })),
+          customerInfo: {
+            ...orderDetails.customerInfo,
+            email: orderDetails.customerInfo.email.toLowerCase().trim(),
+          },
           subtotal,
           deliveryFee,
-          totalAmount: amountInCents,
-          customerInfo: orderDetails.customerInfo,
+          totalAmount: amountInCents / 100, // Convert back to pounds for display
         },
       };
 
-      console.log("Creating order with data:", orderData);
+      console.log("Sending order data:", orderData);
       const response = await paymentAPI.createOrder(orderData);
       console.log("Order created successfully:", response);
       return response;
     } catch (error) {
       console.error("Order creation failed:", error);
       throw new Error(
-        "Failed to create order: " + (error.data?.message || error.message)
+        `Failed to create order: ${error.data?.message || error.message}`
       );
     }
   };
@@ -124,11 +149,13 @@ function CheckoutForm() {
       setIsProcessing(true);
       setError(null);
 
+      console.log("Submitting payment form...");
       const { error: submitError } = await elements.submit();
       if (submitError) {
         throw submitError;
       }
 
+      console.log("Confirming payment...");
       const { error: paymentError, paymentIntent } =
         await stripe.confirmPayment({
           elements,
@@ -156,6 +183,7 @@ function CheckoutForm() {
       }
 
       if (paymentIntent.status === "succeeded") {
+        console.log("Payment succeeded, creating order...");
         const { orderId } = await createOrder(paymentIntent);
         clearCart();
         navigate("/confirmation", {
@@ -198,10 +226,9 @@ function CheckoutForm() {
                 <div className="item-price">
                   <span className="quantity">x{item.quantity}</span>
                   <span className="price">
-                    £
-                    {(
+                    {formatCurrency(
                       (item.selectedPrice || item.price) * item.quantity
-                    ).toFixed(2)}
+                    )}
                   </span>
                 </div>
               </div>
@@ -211,41 +238,56 @@ function CheckoutForm() {
           <div className="price-breakdown">
             <div className="price-row">
               <span>Subtotal</span>
-              <span>£{totals.subtotal.toFixed(2)}</span>
+              <span>{formatCurrency(totals.subtotal)}</span>
             </div>
             <div className="price-row">
               <span>Delivery Fee</span>
-              <span>£{totals.deliveryFee.toFixed(2)}</span>
+              <span>{formatCurrency(totals.deliveryFee)}</span>
             </div>
             <div className="price-row total">
               <span>Total to Pay</span>
-              <span>£{totals.total.toFixed(2)}</span>
+              <span>{formatCurrency(totals.total)}</span>
             </div>
           </div>
         </div>
 
         <div className="delivery-info">
           <h3>Delivery Details</h3>
-          {orderDetails?.customerInfo &&
-            Object.entries(orderDetails.customerInfo).map(
-              ([key, value]) =>
-                key !== "email" &&
-                key !== "specialInstructions" && (
-                  <div key={key} className="info-row">
-                    <span>
-                      {key.charAt(0).toUpperCase() +
-                        key.slice(1).replace(/([A-Z])/g, " $1")}
-                      :
-                    </span>
-                    <span>{value}</span>
-                  </div>
-                )
-            )}
-          {orderDetails?.customerInfo?.specialInstructions && (
-            <div className="special-instructions">
-              <h4>Special Instructions:</h4>
-              <p>{orderDetails.customerInfo.specialInstructions}</p>
-            </div>
+          {orderDetails?.customerInfo && (
+            <>
+              <div className="info-grid">
+                <div className="info-row">
+                  <span>Name:</span>
+                  <span>{orderDetails.customerInfo.name}</span>
+                </div>
+                <div className="info-row">
+                  <span>Phone:</span>
+                  <span>{orderDetails.customerInfo.phone}</span>
+                </div>
+                <div className="info-row">
+                  <span>Address:</span>
+                  <span>{orderDetails.customerInfo.address}</span>
+                </div>
+                <div className="info-row">
+                  <span>City:</span>
+                  <span>{orderDetails.customerInfo.city}</span>
+                </div>
+                <div className="info-row">
+                  <span>Postcode:</span>
+                  <span>{orderDetails.customerInfo.postcode}</span>
+                </div>
+                <div className="info-row">
+                  <span>Delivery Time:</span>
+                  <span>{orderDetails.customerInfo.deliveryTime}</span>
+                </div>
+              </div>
+              {orderDetails.customerInfo.specialInstructions && (
+                <div className="special-instructions">
+                  <h4>Special Instructions:</h4>
+                  <p>{orderDetails.customerInfo.specialInstructions}</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -269,15 +311,11 @@ function CheckoutForm() {
           <div className="button-content">
             {isProcessing ? (
               <>
-                <div
-                  className="spinner"
-                  role="status"
-                  aria-label="Processing payment"
-                />
+                <Spinner size="small" />
                 <span>Processing...</span>
               </>
             ) : (
-              <span>Pay £{totals.total.toFixed(2)}</span>
+              <span>Pay {formatCurrency(totals.total)}</span>
             )}
           </div>
         </button>
@@ -302,15 +340,17 @@ function PaymentPage() {
   useEffect(() => {
     const initializePayment = async () => {
       try {
+        console.log("Initializing payment with cart:", cart);
+
         if (!cart?.length || !orderDetails?.customerInfo) {
           throw new Error("Missing required payment information");
         }
 
-        const totals = calculateTotals(cart);
-        console.log("Sending to API - amount in cents:", totals.amountInCents);
+        const { amountInCents } = calculateTotals(cart);
+        console.log("Sending to API - amount in cents:", amountInCents);
 
         const response = await paymentAPI.createPaymentIntent({
-          amount: totals.amountInCents, // This is already in cents
+          amount: amountInCents,
           currency: "gbp",
           metadata: {
             customerName: orderDetails.customerInfo.name,
@@ -318,6 +358,7 @@ function PaymentPage() {
           },
         });
 
+        console.log("Payment intent created successfully");
         setClientSecret(response.clientSecret);
       } catch (error) {
         console.error("Payment initialization failed:", error);
@@ -343,31 +384,36 @@ function PaymentPage() {
   if (!clientSecret) {
     return (
       <div className="loading-container" role="status">
-        <div className="spinner" />
+        <Spinner />
         <p>Setting up payment...</p>
       </div>
     );
   }
 
   return (
-    <div className="payment-page">
-      <Elements
-        stripe={stripePromise}
-        options={{
-          clientSecret,
-          appearance: {
-            theme: "stripe",
-            variables: {
-              colorPrimary: "#0a5c66",
-              colorBackground: "#ffffff",
-              colorText: "#30313d",
+    <ErrorBoundary>
+      <div className="payment-page">
+        <Elements
+          stripe={stripePromise}
+          options={{
+            clientSecret,
+            appearance: {
+              theme: "stripe",
+              variables: {
+                colorPrimary: "#0a5c66",
+                colorBackground: "#ffffff",
+                colorText: "#30313d",
+                colorDanger: "#df1b41",
+                fontFamily: "Inter, system-ui, sans-serif",
+                borderRadius: "4px",
+              },
             },
-          },
-        }}
-      >
-        <CheckoutForm />
-      </Elements>
-    </div>
+          }}
+        >
+          <CheckoutForm orderDetails={orderDetails} />
+        </Elements>
+      </div>
+    </ErrorBoundary>
   );
 }
 

@@ -1,54 +1,48 @@
 const express = require("express");
 const router = express.Router();
 const Order = require("../Models/Order");
-
-const orderEmailService = require("../Services/orderEmailService");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const orderEmailService = require("../Services/orderEmailService");
 
-// Helper function to parse delivery time
+// Helper function to validate and parse delivery time
 const parseDeliveryTime = (timeString) => {
-  // If timeString is in format "10:00 AM - 12:00 PM"
-  const startTime = timeString.split(" - ")[0];
-  const today = new Date();
-  const [hours, minutes] = startTime.match(/(\d+):(\d+)/).slice(1);
-  const isPM = startTime.includes("PM");
+  try {
+    const [hours, minutes] = timeString.split(":").map(Number);
+    const today = new Date();
+    const deliveryDate = new Date(today);
 
-  const deliveryDate = new Date(today);
-  deliveryDate.setHours(
-    isPM && parseInt(hours) !== 12 ? parseInt(hours) + 12 : parseInt(hours),
-    parseInt(minutes),
-    0,
-    0
-  );
+    deliveryDate.setHours(hours, minutes, 0, 0);
 
-  // If the delivery time has already passed for today, set it to the next day
-  if (deliveryDate < today) {
-    deliveryDate.setDate(deliveryDate.getDate() + 1);
+    // If time has passed for today, set for tomorrow
+    if (deliveryDate <= today) {
+      deliveryDate.setDate(deliveryDate.getDate() + 1);
+    }
+
+    return deliveryDate;
+  } catch (error) {
+    throw new Error("Invalid delivery time format");
   }
-
-  // Ensure that the delivery time is in the future
-  if (deliveryDate <= today) {
-    throw new Error("Delivery time must be in the future");
-  }
-
-  return deliveryDate;
 };
 
-// Create a payment intent
+// Create payment intent
 router.post("/create-payment-intent", async (req, res) => {
   try {
+    console.log("Received payment intent request:", req.body);
     const { amount } = req.body;
 
-    if (!amount || amount <= 0 || isNaN(amount)) {
+    // Validate amount - expecting it to be in cents already
+    if (!amount || !Number.isInteger(amount) || amount <= 0) {
+      console.error("Invalid amount received:", amount);
       return res.status(400).json({
         status: "error",
-        error: "Invalid amount provided",
+        error: "Invalid amount provided: amount must be a positive integer",
       });
     }
 
-    // The amount from frontend is already in cents, don't multiply again
+    console.log("Creating payment intent for amount (in cents):", amount);
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount), // Just round it to ensure whole number
+      amount: amount,
       currency: "gbp",
       automatic_payment_methods: {
         enabled: true,
@@ -58,6 +52,7 @@ router.post("/create-payment-intent", async (req, res) => {
       },
     });
 
+    console.log("Payment intent created successfully");
     res.json({
       status: "success",
       clientSecret: paymentIntent.client_secret,
@@ -72,9 +67,10 @@ router.post("/create-payment-intent", async (req, res) => {
   }
 });
 
-// Handle order creation
+// Create order
 router.post("/", async (req, res) => {
   try {
+    console.log("Received order creation request:", req.body);
     const { paymentIntentId, orderDetails } = req.body;
 
     // Validate required fields
@@ -86,84 +82,50 @@ router.post("/", async (req, res) => {
     }
 
     // Verify payment intent with Stripe
-    try {
-      const paymentIntent =
-        await stripe.paymentIntents.retrieve(paymentIntentId);
-      if (paymentIntent.status !== "succeeded") {
-        return res.status(400).json({
-          status: "error",
-          error: "Payment has not been completed successfully",
-        });
-      }
-    } catch (stripeError) {
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    console.log(
+      "Retrieved payment intent:",
+      paymentIntent.id,
+      "Status:",
+      paymentIntent.status
+    );
+
+    if (paymentIntent.status !== "succeeded") {
       return res.status(400).json({
         status: "error",
-        error: "Invalid payment information",
+        error: "Payment has not been completed successfully",
       });
     }
 
-    // Validate customer information
-    const customerInfo = orderDetails.customerInfo || {};
-    const { email, address, city, postcode, deliveryTime, name, phone } =
-      customerInfo;
-
-    if (!email || !address || !city || !postcode || !deliveryTime) {
-      return res.status(400).json({
-        status: "error",
-        error:
-          "Customer information is incomplete. Please provide email, address, city, postcode, and delivery time.",
-      });
-    }
-
-    if (!address.trim()) {
-      return res.status(400).json({
-        status: "error",
-        error: "Street address is required",
-      });
-    }
-
-    // Parse and validate the requested delivery time
-    let requestedDeliveryTime;
-    try {
-      requestedDeliveryTime = parseDeliveryTime(deliveryTime);
-    } catch (deliveryError) {
-      return res.status(400).json({
-        status: "error",
-        error: deliveryError.message,
-      });
-    }
-
-    // Calculate amounts
-    const subtotal = Number((orderDetails.totalAmount - 2.5).toFixed(2));
+    // Convert amounts from cents to pounds
+    const amountInPounds = paymentIntent.amount / 100;
     const deliveryFee = 2.5;
-    const total = Number(orderDetails.totalAmount.toFixed(2));
+    const subtotalInPounds = Number((amountInPounds - deliveryFee).toFixed(2));
 
-    // Validate order items
-    if (!Array.isArray(orderDetails.items) || orderDetails.items.length === 0) {
-      return res.status(400).json({
-        status: "error",
-        error: "Order must contain at least one item",
-      });
-    }
+    // Format delivery time
+    const deliveryTime = parseDeliveryTime(
+      orderDetails.customerInfo.deliveryTime
+    );
 
-    // Create the order object
+    // Create order object
     const newOrder = new Order({
       customer: {
-        name: name || "Customer",
-        email: email.toLowerCase().trim(),
-        phone: phone || "",
+        name: orderDetails.customerInfo.name,
+        email: orderDetails.customerInfo.email.toLowerCase().trim(),
+        phone: orderDetails.customerInfo.phone,
       },
       orderDetails: orderDetails.items.map((item) => ({
         item: item.id,
         name: item.name,
-        quantity: parseInt(item.quantity),
+        quantity: parseInt(item.quantity, 10),
         price: Number(item.selectedPrice || item.price),
         size: item.size || "regular",
       })),
       amount: {
-        subtotal,
-        deliveryFee,
-        total,
+        subtotal: subtotalInPounds,
+        deliveryFee: deliveryFee,
+        total: amountInPounds,
+        discount: orderDetails.discount || 0,
       },
       paymentDetails: {
         paymentIntentId,
@@ -171,13 +133,14 @@ router.post("/", async (req, res) => {
         status: "succeeded",
       },
       address: {
-        street: address.trim(),
-        city: city.trim(),
-        postcode: postcode.trim().toUpperCase(),
+        street: orderDetails.customerInfo.address.trim(),
+        city: orderDetails.customerInfo.city.trim(),
+        postcode: orderDetails.customerInfo.postcode.trim().toUpperCase(),
       },
       deliveryTime: {
-        requested: requestedDeliveryTime,
+        requested: deliveryTime,
       },
+      specialInstructions: orderDetails.customerInfo.specialInstructions,
       orderStatus: {
         current: "pending",
         history: [
@@ -190,9 +153,10 @@ router.post("/", async (req, res) => {
       },
     });
 
-    // Validate the order against the schema
+    // Validate order
     const validationError = newOrder.validateSync();
     if (validationError) {
+      console.error("Order validation failed:", validationError);
       return res.status(400).json({
         status: "error",
         error: "Validation failed",
@@ -200,38 +164,29 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Save the order
-    await newOrder.save();
+    // Save order
+    const savedOrder = await newOrder.save();
+    console.log("Order saved successfully:", savedOrder._id);
 
     // Send confirmation email
     try {
-      await orderEmailService.sendOrderConfirmation(email, newOrder);
-      console.log("Order confirmation email sent successfully");
+      await orderEmailService.sendOrderConfirmation(
+        orderDetails.customerInfo.email,
+        savedOrder
+      );
+      console.log("Order confirmation email sent");
     } catch (emailError) {
-      console.error("Failed to send confirmation email:", emailError, {
-        orderId: newOrder._id,
-        customerEmail: email,
-        orderData: newOrder.toObject(),
-      });
-      // Don't return here - we still want to return the successful order
+      console.error("Failed to send confirmation email:", emailError);
+      // Continue with the response even if email fails
     }
 
     res.status(201).json({
       status: "success",
       message: "Order created successfully",
-      orderId: newOrder._id,
+      orderId: savedOrder._id,
     });
   } catch (error) {
     console.error("Order creation failed:", error);
-
-    if (error.name === "ValidationError") {
-      return res.status(400).json({
-        status: "error",
-        error: "Validation failed",
-        details: error.errors,
-      });
-    }
-
     res.status(500).json({
       status: "error",
       error: "Failed to create order",
@@ -240,14 +195,31 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Get all orders
+// Get all orders with optional filtering
 router.get("/", async (req, res) => {
   try {
-    // Fetch all orders, sorted by creation date in descending order
-    const orders = await Order.find({}).sort({ createdAt: -1 }).lean();
+    const { status, date, email } = req.query;
+    let query = {};
+
+    // Apply filters if provided
+    if (status) {
+      query["orderStatus.current"] = status;
+    }
+    if (date) {
+      const startOfDay = new Date(date);
+      const endOfDay = new Date(date);
+      endOfDay.setDate(endOfDay.getDate() + 1);
+      query.createdAt = { $gte: startOfDay, $lt: endOfDay };
+    }
+    if (email) {
+      query["customer.email"] = email.toLowerCase();
+    }
+
+    const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
 
     res.json({
       status: "success",
+      count: orders.length,
       data: orders,
     });
   } catch (error) {
@@ -263,7 +235,6 @@ router.get("/", async (req, res) => {
 router.get("/:orderId", async (req, res) => {
   try {
     const { orderId } = req.params;
-    console.log("Received orderId:", orderId);
     const order = await Order.findById(orderId);
 
     if (!order) {
@@ -275,13 +246,159 @@ router.get("/:orderId", async (req, res) => {
 
     res.json({
       status: "success",
-      order,
+      data: order,
     });
   } catch (error) {
     console.error("Error fetching order:", error);
     res.status(500).json({
       status: "error",
       error: "Failed to fetch order details",
+    });
+  }
+});
+
+// Update order status
+router.patch("/:orderId/status", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status, note } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        status: "error",
+        error: "Status is required",
+      });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        status: "error",
+        error: "Order not found",
+      });
+    }
+
+    // Update status
+    order.orderStatus.current = status;
+    order.orderStatus.history.push({
+      status,
+      timestamp: new Date(),
+      note: note || `Status updated to ${status}`,
+    });
+
+    await order.save();
+
+    // Attempt to send status update email
+    try {
+      await orderEmailService.sendStatusUpdate(order.customer.email, order);
+    } catch (emailError) {
+      console.error("Failed to send status update email:", emailError);
+    }
+
+    res.json({
+      status: "success",
+      message: "Order status updated successfully",
+      data: order,
+    });
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    res.status(500).json({
+      status: "error",
+      error: "Failed to update order status",
+    });
+  }
+});
+
+// Cancel order
+router.post("/:orderId/cancel", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { reason } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        status: "error",
+        error: "Order not found",
+      });
+    }
+
+    if (!order.canBeCancelled()) {
+      return res.status(400).json({
+        status: "error",
+        error: "Order cannot be cancelled in its current state",
+      });
+    }
+
+    // Process refund if payment was made
+    if (order.paymentDetails.status === "succeeded") {
+      try {
+        const refund = await stripe.refunds.create({
+          payment_intent: order.paymentDetails.paymentIntentId,
+        });
+
+        order.paymentDetails.refundDetails = {
+          amount: order.amount.total,
+          reason: reason || "Customer requested cancellation",
+          date: new Date(),
+        };
+      } catch (refundError) {
+        console.error("Refund failed:", refundError);
+        return res.status(500).json({
+          status: "error",
+          error: "Failed to process refund",
+        });
+      }
+    }
+
+    // Update order status
+    order.orderStatus.current = "cancelled";
+    order.orderStatus.history.push({
+      status: "cancelled",
+      timestamp: new Date(),
+      note: reason || "Order cancelled by customer",
+    });
+
+    await order.save();
+
+    // Send cancellation email
+    try {
+      await orderEmailService.sendCancellationEmail(
+        order.customer.email,
+        order
+      );
+    } catch (emailError) {
+      console.error("Failed to send cancellation email:", emailError);
+    }
+
+    res.json({
+      status: "success",
+      message: "Order cancelled successfully",
+    });
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    res.status(500).json({
+      status: "error",
+      error: "Failed to cancel order",
+    });
+  }
+});
+
+// Get orders requiring attention (for admin dashboard)
+router.get("/admin/attention", async (req, res) => {
+  try {
+    const orders = await Order.findRequiringAttention();
+
+    res.json({
+      status: "success",
+      count: orders.length,
+      data: orders,
+    });
+  } catch (error) {
+    console.error("Error fetching orders requiring attention:", error);
+    res.status(500).json({
+      status: "error",
+      error: "Failed to fetch orders requiring attention",
     });
   }
 });
