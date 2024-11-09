@@ -27,28 +27,29 @@ const parseDeliveryTime = (timeString) => {
 // Create payment intent
 router.post("/create-payment-intent", async (req, res) => {
   try {
-    console.log("Received payment intent request:", req.body);
     const { amount } = req.body;
 
-    // Validate amount - expecting it to be in cents already
-    if (!amount || !Number.isInteger(amount) || amount <= 0) {
-      console.error("Invalid amount received:", amount);
+    // Log the received amount
+    console.log("Received amount:", amount);
+
+    // Validate amount
+    if (!amount || typeof amount !== "number" || amount <= 0) {
+      console.error("Invalid amount:", amount);
       return res.status(400).json({
         status: "error",
-        error: "Invalid amount provided: amount must be a positive integer",
+        error: "Invalid amount provided: amount must be a positive number",
       });
     }
 
-    console.log("Creating payment intent for amount (in cents):", amount);
+    // Ensure amount is an integer (whole number of cents)
+    const roundedAmount = Math.round(amount);
+    console.log("Creating payment intent with amount:", roundedAmount);
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount,
+      amount: roundedAmount,
       currency: "gbp",
       automatic_payment_methods: {
         enabled: true,
-      },
-      metadata: {
-        integration_check: "accept_a_payment",
       },
     });
 
@@ -67,13 +68,13 @@ router.post("/create-payment-intent", async (req, res) => {
   }
 });
 
-// Create order
+// Create order route
 router.post("/", async (req, res) => {
   try {
     console.log("Received order creation request:", req.body);
     const { paymentIntentId, orderDetails } = req.body;
 
-    // Validate required fields
+    // Initial validation
     if (!orderDetails || !paymentIntentId) {
       return res.status(400).json({
         status: "error",
@@ -81,7 +82,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Verify payment intent with Stripe
+    // Verify payment with Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     console.log(
       "Retrieved payment intent:",
@@ -97,12 +98,22 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Convert amounts from cents to pounds
+    // Validate order data
+    const validationErrors = validateOrderData(orderDetails, paymentIntent);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        status: "error",
+        error: "Order validation failed",
+        details: validationErrors,
+      });
+    }
+
+    // Convert amounts
     const amountInPounds = paymentIntent.amount / 100;
     const deliveryFee = 2.5;
     const subtotalInPounds = Number((amountInPounds - deliveryFee).toFixed(2));
 
-    // Format delivery time
+    // Parse delivery time
     const deliveryTime = parseDeliveryTime(
       orderDetails.customerInfo.deliveryTime
     );
@@ -123,7 +134,7 @@ router.post("/", async (req, res) => {
       })),
       amount: {
         subtotal: subtotalInPounds,
-        deliveryFee: deliveryFee,
+        deliveryFee,
         total: amountInPounds,
         discount: orderDetails.discount || 0,
       },
@@ -153,7 +164,7 @@ router.post("/", async (req, res) => {
       },
     });
 
-    // Validate order
+    // Validate against schema
     const validationError = newOrder.validateSync();
     if (validationError) {
       console.error("Order validation failed:", validationError);
@@ -177,9 +188,10 @@ router.post("/", async (req, res) => {
       console.log("Order confirmation email sent");
     } catch (emailError) {
       console.error("Failed to send confirmation email:", emailError);
-      // Continue with the response even if email fails
+      // Log but don't fail the order
     }
 
+    // Send success response
     res.status(201).json({
       status: "success",
       message: "Order created successfully",

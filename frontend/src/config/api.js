@@ -1,23 +1,17 @@
 // src/config/api.js
+import axios from "axios";
 
-// Environment-based API URL with validation
-const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || "http://localhost:5000";
-
-// Validate API URL configuration
-const validateAPIUrl = () => {
-  if (!API_BASE_URL) {
-    console.error("API Base URL is not configured properly");
-    throw new Error("API_BASE_URL is not defined");
-  }
+// Environment and Configuration
+const API_CONFIG = {
+  baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:5000",
+  timeout: 15000,
+  retryAttempts: 3,
+  retryDelay: 1000,
+  environment: process.env.NODE_ENV,
+  version: process.env.REACT_APP_VERSION,
 };
 
-// Common headers
-const DEFAULT_HEADERS = {
-  "Content-Type": "application/json",
-};
-
-// Generic API error class with enhanced error details
+// Error Classes
 class APIError extends Error {
   constructor(message, status, data) {
     super(message);
@@ -28,173 +22,8 @@ class APIError extends Error {
   }
 }
 
-// Enhanced fetch wrapper with comprehensive error handling
-async function fetchWithErrorHandling(url, options) {
-  validateAPIUrl();
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...DEFAULT_HEADERS,
-        ...options.headers,
-      },
-      credentials: "include", // For handling cookies if needed
-    });
-
-    // Handle different response types
-    const contentType = response.headers.get("content-type");
-    const data = contentType?.includes("application/json")
-      ? await response.json()
-      : await response.text();
-
-    if (!response.ok) {
-      throw new APIError(
-        typeof data === "object" ? data.error : "An error occurred",
-        response.status,
-        data
-      );
-    }
-
-    return data;
-  } catch (error) {
-    if (error instanceof APIError) {
-      throw error;
-    }
-
-    console.error("API Request failed:", {
-      url,
-      error: error.message,
-      baseUrl: API_BASE_URL,
-    });
-
-    throw new APIError("Failed to connect to the server", 500, {
-      originalError: error.message,
-    });
-  }
-}
-
-// Payment related API calls
-export const paymentAPI = {
-  createPaymentIntent: async (amount) => {
-    validateAmount(amount);
-    return fetchWithErrorHandling(
-      `${API_BASE_URL}/api/orders/create-payment-intent`,
-      {
-        method: "POST",
-        body: JSON.stringify({ amount }),
-      }
-    );
-  },
-
-  createOrder: async (orderData) => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/orders`, {
-      method: "POST",
-      body: JSON.stringify(orderData),
-    });
-  },
-
-  getOrderStatus: async (orderId) => {
-    if (!orderId) throw new Error("Order ID is required");
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/orders/${orderId}`, {
-      method: "GET",
-    });
-  },
-
-  // New method for handling payment confirmation
-  confirmPayment: async (paymentIntentId) => {
-    if (!paymentIntentId) throw new Error("Payment Intent ID is required");
-    return fetchWithErrorHandling(
-      `${API_BASE_URL}/api/orders/confirm-payment`,
-      {
-        method: "POST",
-        body: JSON.stringify({ paymentIntentId }),
-      }
-    );
-  },
-};
-
-// Order related API calls with enhanced error handling
-export const orderAPI = {
-  create: async (orderData) => {
-    if (!orderData) throw new Error("Order data is required");
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/orders`, {
-      method: "POST",
-      body: JSON.stringify(orderData),
-    });
-  },
-
-  getStatus: async (orderId) => {
-    if (!orderId) throw new Error("Order ID is required");
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/orders/${orderId}`, {
-      method: "GET",
-    });
-  },
-
-  // New method for getting order history
-  getHistory: async () => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/orders/history`, {
-      method: "GET",
-    });
-  },
-
-  // New method for updating order status
-  updateStatus: async (orderId, status) => {
-    if (!orderId) throw new Error("Order ID is required");
-    if (!status) throw new Error("Status is required");
-    return fetchWithErrorHandling(
-      `${API_BASE_URL}/api/orders/${orderId}/status`,
-      {
-        method: "PUT",
-        body: JSON.stringify({ status }),
-      }
-    );
-  },
-};
-
-// Configuration object with additional options
-export const apiConfig = {
-  baseURL: API_BASE_URL,
-  headers: DEFAULT_HEADERS,
-  timeout: 15000, // 15 seconds timeout
-  retryAttempts: 3,
-};
-
-// Enhanced API health check
-export const checkAPIHealth = async () => {
-  try {
-    console.log("Checking API health at:", API_BASE_URL);
-    const startTime = Date.now();
-    const response = await fetch(`${API_BASE_URL}/health`, {
-      method: "GET",
-      headers: DEFAULT_HEADERS,
-    });
-    const endTime = Date.now();
-
-    const healthStatus = {
-      isHealthy: response.ok,
-      responseTime: endTime - startTime,
-      timestamp: new Date().toISOString(),
-    };
-
-    console.log("API health status:", healthStatus);
-    return healthStatus;
-  } catch (error) {
-    console.error("API health check failed:", {
-      error: error.message,
-      baseUrl: API_BASE_URL,
-      timestamp: new Date().toISOString(),
-    });
-    return {
-      isHealthy: false,
-      error: error.message,
-      timestamp: new Date().toISOString(),
-    };
-  }
-};
-
-// Enhanced validation utilities
-export const validateAmount = (amount) => {
+// Validation Functions
+const validateAmount = (amount) => {
   if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
     throw new Error(
       "Invalid amount provided: amount must be a positive number"
@@ -203,8 +32,259 @@ export const validateAmount = (amount) => {
   return true;
 };
 
-// New utility for retrying failed requests
-export const retryRequest = async (fn, retries = 3, delay = 1000) => {
+const validateOrderData = (orderData) => {
+  if (!orderData) throw new Error("Order data is required");
+  if (!orderData.items || !Array.isArray(orderData.items)) {
+    throw new Error("Order must contain items array");
+  }
+  if (!orderData.customerInfo)
+    throw new Error("Customer information is required");
+  return true;
+};
+
+// Axios Instance Configuration
+const api = axios.create({
+  baseURL: API_CONFIG.baseURL,
+  timeout: API_CONFIG.timeout,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Request Interceptor
+api.interceptors.request.use(
+  (config) => {
+    if (API_CONFIG.environment === "development") {
+      console.log("API Request:", {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        data: config.data,
+      });
+    }
+    return config;
+  },
+  (error) => {
+    console.error("Request Interceptor Error:", error);
+    return Promise.reject(error);
+  }
+);
+
+// Response Interceptor
+api.interceptors.response.use(
+  (response) => {
+    if (API_CONFIG.environment === "development") {
+      console.log("API Response:", {
+        status: response.status,
+        data: response.data,
+      });
+    }
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Retry logic for failed requests
+    if (
+      !originalRequest._retry &&
+      originalRequest.retryAttempt < API_CONFIG.retryAttempts
+    ) {
+      originalRequest._retry = true;
+      originalRequest.retryAttempt = (originalRequest.retryAttempt || 0) + 1;
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, API_CONFIG.retryDelay)
+      );
+      return api(originalRequest);
+    }
+
+    // Error handling
+    if (error.response) {
+      // Server responded with error status
+      console.error("API Response Error:", {
+        status: error.response.status,
+        data: error.response.data,
+        url: originalRequest.url,
+      });
+    } else if (error.request) {
+      // Request made but no response
+      console.error("API No Response:", {
+        request: error.request,
+        url: originalRequest.url,
+      });
+    } else {
+      // Request setup error
+      console.error("API Request Setup Error:", error.message);
+    }
+
+    return Promise.reject(
+      new APIError(
+        error.response?.data?.message || error.message,
+        error.response?.status || 500,
+        error.response?.data
+      )
+    );
+  }
+);
+
+// Payment API
+export const paymentAPI = {
+  createPaymentIntent: async (data) => {
+    try {
+      validateAmount(data.amount);
+
+      const response = await api.post("/orders/create-payment-intent", {
+        amount: data.amount,
+        currency: data.currency || "gbp",
+        metadata: data.metadata || {},
+      });
+
+      if (!response.data.clientSecret) {
+        throw new Error(
+          "No client secret received from payment intent creation"
+        );
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error("Payment Intent Creation Error:", error);
+      throw error.response?.data || error;
+    }
+  },
+
+  createOrder: async (orderData) => {
+    try {
+      validateOrderData(orderData);
+
+      const response = await api.post("/orders", orderData);
+      return response.data;
+    } catch (error) {
+      console.error("Order Creation Error:", error);
+      throw error.response?.data || error;
+    }
+  },
+
+  confirmPayment: async (paymentIntentId) => {
+    try {
+      if (!paymentIntentId) throw new Error("Payment Intent ID is required");
+
+      const response = await api.post("/orders/confirm-payment", {
+        paymentIntentId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Payment Confirmation Error:", error);
+      throw error.response?.data || error;
+    }
+  },
+
+  getPaymentStatus: async (paymentIntentId) => {
+    try {
+      if (!paymentIntentId) throw new Error("Payment Intent ID is required");
+
+      const response = await api.get(
+        `/orders/payment-status/${paymentIntentId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Payment Status Check Error:", error);
+      throw error.response?.data || error;
+    }
+  },
+};
+
+// Order API
+export const orderAPI = {
+  create: async (orderData) => {
+    try {
+      validateOrderData(orderData);
+
+      const response = await api.post("/orders", orderData);
+      return response.data;
+    } catch (error) {
+      console.error("Order Creation Error:", error);
+      throw error.response?.data || error;
+    }
+  },
+
+  getStatus: async (orderId) => {
+    try {
+      if (!orderId) throw new Error("Order ID is required");
+
+      const response = await api.get(`/orders/${orderId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Order Status Check Error:", error);
+      throw error.response?.data || error;
+    }
+  },
+
+  getHistory: async () => {
+    try {
+      const response = await api.get("/orders/history");
+      return response.data;
+    } catch (error) {
+      console.error("Order History Error:", error);
+      throw error.response?.data || error;
+    }
+  },
+
+  updateStatus: async (orderId, status) => {
+    try {
+      if (!orderId) throw new Error("Order ID is required");
+      if (!status) throw new Error("Status is required");
+
+      const response = await api.put(`/orders/${orderId}/status`, { status });
+      return response.data;
+    } catch (error) {
+      console.error("Order Status Update Error:", error);
+      throw error.response?.data || error;
+    }
+  },
+
+  cancel: async (orderId, reason) => {
+    try {
+      if (!orderId) throw new Error("Order ID is required");
+
+      const response = await api.post(`/orders/${orderId}/cancel`, { reason });
+      return response.data;
+    } catch (error) {
+      console.error("Order Cancellation Error:", error);
+      throw error.response?.data || error;
+    }
+  },
+};
+
+// Health Check
+export const checkAPIHealth = async () => {
+  try {
+    const startTime = Date.now();
+    const response = await api.get("/health");
+    const endTime = Date.now();
+
+    return {
+      isHealthy: true,
+      responseTime: endTime - startTime,
+      status: response.data.status,
+      timestamp: new Date().toISOString(),
+      environment: API_CONFIG.environment,
+    };
+  } catch (error) {
+    return {
+      isHealthy: false,
+      error: error.message,
+      timestamp: new Date().toISOString(),
+      environment: API_CONFIG.environment,
+    };
+  }
+};
+
+// Utility Functions
+export const retryRequest = async (
+  fn,
+  retries = API_CONFIG.retryAttempts,
+  delay = API_CONFIG.retryDelay
+) => {
   try {
     return await fn();
   } catch (error) {
@@ -214,9 +294,15 @@ export const retryRequest = async (fn, retries = 3, delay = 1000) => {
   }
 };
 
-// Export environment information
-export const getEnvironmentInfo = () => ({
-  apiUrl: API_BASE_URL,
-  environment: process.env.NODE_ENV,
-  version: process.env.REACT_APP_VERSION,
+export const getAPIConfig = () => ({
+  ...API_CONFIG,
+  currentTime: new Date().toISOString(),
 });
+
+export default {
+  paymentAPI,
+  orderAPI,
+  checkAPIHealth,
+  retryRequest,
+  getAPIConfig,
+};

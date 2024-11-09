@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import {
   PaymentElement,
@@ -8,7 +8,7 @@ import {
 import { loadStripe } from "@stripe/stripe-js";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
-import ProgressSteps from "../ProgressSteps/index.jsx";
+import ProgressSteps from "../ProgressSteps";
 import { paymentAPI } from "../../config/api";
 import "./styles.css";
 
@@ -16,45 +16,38 @@ const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 const DELIVERY_FEE = 2.5;
 
+// Validation functions
 const validateCartItem = (item) => {
   if (!item) throw new Error("Invalid cart item");
 
-  const price = item.selectedPrice || item.price;
-  const quantity = item.quantity;
+  const price = Number(item.selectedPrice || item.price);
+  const quantity = Number(item.quantity);
 
-  if (typeof price !== "number" || price <= 0) {
+  if (typeof price !== "number" || isNaN(price) || price <= 0) {
     throw new Error(`Invalid price for item: ${item.name}`);
   }
   if (!Number.isInteger(quantity) || quantity <= 0) {
     throw new Error(`Invalid quantity for item: ${item.name}`);
   }
 
-  return true;
+  return { price, quantity };
 };
 
-const calculateTotals = (cart) => {
+const validateCartAndCalculateTotals = (cart) => {
   if (!Array.isArray(cart) || cart.length === 0) {
     throw new Error("Cart is empty or invalid");
   }
 
-  // Calculate subtotal from cart items
-  const subtotal = cart.reduce((sum, item) => {
-    const price = parseFloat(item.selectedPrice || item.price);
-    const quantity = parseInt(item.quantity, 10);
-
-    if (isNaN(price) || price <= 0) {
-      throw new Error(`Invalid price for item: ${item.name}`);
-    }
-    if (isNaN(quantity) || quantity <= 0) {
-      throw new Error(`Invalid quantity for item: ${item.name}`);
-    }
-
-    return sum + price * quantity;
-  }, 0);
+  // Validate and calculate each item
+  const itemTotals = cart.map((item) => {
+    const { price, quantity } = validateCartItem(item);
+    return price * quantity;
+  });
 
   // Calculate totals
+  const subtotal = itemTotals.reduce((sum, total) => sum + total, 0);
   const total = subtotal + DELIVERY_FEE;
-  const amountInCents = Math.round(total * 100); // Convert to cents for Stripe
+  const amountInCents = Math.round(total * 100);
 
   console.log("Payment calculations:", {
     subtotal,
@@ -89,34 +82,39 @@ function CheckoutForm() {
     }
   }, [orderDetails, cart, navigate]);
 
-  const createOrder = async (paymentIntent) => {
-    try {
-      const orderData = {
-        paymentIntentId: paymentIntent.id,
-        orderDetails: {
-          items: cart.map((item) => ({
-            id: item._id || item.id,
-            name: item.name,
-            quantity: parseInt(item.quantity, 10),
-            price: Number(item.selectedPrice || item.price),
-            size: item.size || "regular",
-          })),
-          ...orderDetails,
-          customerInfo: orderDetails.customerInfo,
-        },
-      };
+  const createOrder = useCallback(
+    async (paymentIntent) => {
+      try {
+        const validatedItems = cart.map((item) => ({
+          id: item._id || item.id,
+          name: item.name,
+          quantity: parseInt(item.quantity, 10),
+          price: Number(item.selectedPrice || item.price),
+          size: item.size || "regular",
+        }));
 
-      console.log("Creating order with data:", orderData);
-      const response = await paymentAPI.createOrder(orderData);
-      console.log("Order created successfully:", response);
-      return response;
-    } catch (error) {
-      console.error("Order creation failed:", error);
-      throw new Error(
-        "Failed to create order: " + (error.data?.message || error.message)
-      );
-    }
-  };
+        const orderData = {
+          paymentIntentId: paymentIntent.id,
+          orderDetails: {
+            items: validatedItems,
+            ...orderDetails,
+            customerInfo: orderDetails.customerInfo,
+          },
+        };
+
+        console.log("Creating order with data:", orderData);
+        const response = await paymentAPI.createOrder(orderData);
+        console.log("Order created successfully:", response);
+        return response;
+      } catch (error) {
+        console.error("Order creation failed:", error);
+        throw new Error(
+          "Failed to create order: " + (error.data?.message || error.message)
+        );
+      }
+    },
+    [cart, orderDetails]
+  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -128,6 +126,9 @@ function CheckoutForm() {
     try {
       setIsProcessing(true);
       setError(null);
+
+      // Validate cart before proceeding
+      validateCartAndCalculateTotals(cart);
 
       const { error: submitError } = await elements.submit();
       if (submitError) {
@@ -180,7 +181,8 @@ function CheckoutForm() {
     }
   };
 
-  const totals = calculateTotals(cart);
+  // Calculate totals for display
+  const totals = validateCartAndCalculateTotals(cart);
 
   return (
     <div className="payment-container">
@@ -191,26 +193,28 @@ function CheckoutForm() {
         <div className="order-summary">
           <h2>Order Summary</h2>
           <div className="items-list">
-            {cart.map((item) => (
-              <div
-                key={`${item.id || item._id}-${item.size || "regular"}`}
-                className="order-item"
-              >
-                <div className="item-info">
-                  <span className="item-name">{item.name}</span>
-                  {item.size && <span className="item-size">{item.size}</span>}
+            {cart.map((item) => {
+              const { price } = validateCartItem(item);
+              return (
+                <div
+                  key={`${item.id || item._id}-${item.size || "regular"}`}
+                  className="order-item"
+                >
+                  <div className="item-info">
+                    <span className="item-name">{item.name}</span>
+                    {item.size && (
+                      <span className="item-size">{item.size}</span>
+                    )}
+                  </div>
+                  <div className="item-price">
+                    <span className="quantity">x{item.quantity}</span>
+                    <span className="price">
+                      £{(price * item.quantity).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
-                <div className="item-price">
-                  <span className="quantity">x{item.quantity}</span>
-                  <span className="price">
-                    £
-                    {(
-                      (item.selectedPrice || item.price) * item.quantity
-                    ).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="price-breakdown">
@@ -231,26 +235,29 @@ function CheckoutForm() {
 
         <div className="delivery-info">
           <h3>Delivery Details</h3>
-          {orderDetails?.customerInfo &&
-            Object.entries(orderDetails.customerInfo).map(
-              ([key, value]) =>
-                key !== "email" &&
-                key !== "specialInstructions" && (
-                  <div key={key} className="info-row">
-                    <span>
-                      {key.charAt(0).toUpperCase() +
-                        key.slice(1).replace(/([A-Z])/g, " $1")}
-                      :
-                    </span>
-                    <span>{value}</span>
-                  </div>
-                )
-            )}
-          {orderDetails?.customerInfo?.specialInstructions && (
-            <div className="special-instructions">
-              <h4>Special Instructions:</h4>
-              <p>{orderDetails.customerInfo.specialInstructions}</p>
-            </div>
+          {orderDetails?.customerInfo && (
+            <>
+              {Object.entries(orderDetails.customerInfo).map(
+                ([key, value]) =>
+                  key !== "email" &&
+                  key !== "specialInstructions" && (
+                    <div key={key} className="info-row">
+                      <span>
+                        {key.charAt(0).toUpperCase() +
+                          key.slice(1).replace(/([A-Z])/g, " $1")}
+                        :
+                      </span>
+                      <span>{value}</span>
+                    </div>
+                  )
+              )}
+              {orderDetails.customerInfo.specialInstructions && (
+                <div className="special-instructions">
+                  <h4>Special Instructions:</h4>
+                  <p>{orderDetails.customerInfo.specialInstructions}</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -314,13 +321,11 @@ function PaymentPage() {
           throw new Error("Missing required payment information");
         }
 
-        // Use the amount that was already calculated in checkout
-        const amount = orderDetails.totalAmount;
-
-        console.log("Creating payment intent with amount:", amount);
+        const { amountInCents } = validateCartAndCalculateTotals(cart);
+        console.log("Creating payment intent with amount:", amountInCents);
 
         const response = await paymentAPI.createPaymentIntent({
-          amount: amount, // Already in cents from checkout
+          amount: amountInCents,
           currency: "gbp",
           metadata: {
             customerName: orderDetails.customerInfo.name,
