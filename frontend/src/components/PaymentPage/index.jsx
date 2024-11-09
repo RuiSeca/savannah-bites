@@ -64,73 +64,27 @@ const validateCartAndCalculateTotals = (cart) => {
   };
 };
 
-function CheckoutForm() {
+function CheckoutForm({ orderDetails }) {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
-  const location = useLocation();
   const { cart, clearCart } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
 
-  const orderDetails = location.state?.orderDetails;
-
-  // In PaymentPage component
   useEffect(() => {
-    const initializePayment = async () => {
-      try {
-        setLoading(true);
-
-        // Validate cart and order details before proceeding
-        if (!cart || !Array.isArray(cart) || cart.length === 0) {
-          throw new Error("Your cart is empty");
-        }
-
-        if (!orderDetails?.customerInfo) {
-          throw new Error("Please complete your delivery information");
-        }
-
-        const requiredFields = [
-          "name",
-          "email",
-          "phone",
-          "address",
-          "city",
-          "postcode",
-          "deliveryTime",
-        ];
-
-        const missingFields = requiredFields.filter(
-          (field) => !orderDetails.customerInfo[field]
-        );
-
-        if (missingFields.length > 0) {
-          throw new Error(
-            `Missing required fields: ${missingFields.join(", ")}`
-          );
-        }
-
-        const { amountInCents } = validateCartAndCalculateTotals(cart);
-        // ... rest of the payment initialization code
-      } catch (error) {
-        console.error("Payment initialization failed:", error);
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializePayment();
-  }, [cart, orderDetails, navigate]);
+    if (!orderDetails?.customerInfo || !cart?.length) {
+      console.log("Missing requirements, redirecting to checkout");
+      navigate("/checkout");
+    }
+  }, [orderDetails, cart, navigate]);
 
   const createOrder = useCallback(
     async (paymentIntent) => {
       try {
-        // Add logging to verify cart and orderDetails
         console.log("Cart data:", cart);
         console.log("Order details:", orderDetails);
 
-        // Validate data before proceeding
         if (!cart || !Array.isArray(cart) || cart.length === 0) {
           throw new Error("Cart is empty or invalid");
         }
@@ -190,7 +144,6 @@ function CheckoutForm() {
       setIsProcessing(true);
       setError(null);
 
-      // Validate cart before proceeding
       validateCartAndCalculateTotals(cart);
 
       const { error: submitError } = await elements.submit();
@@ -244,7 +197,6 @@ function CheckoutForm() {
     }
   };
 
-  // Calculate totals for display
   const totals = validateCartAndCalculateTotals(cart);
 
   return (
@@ -451,7 +403,7 @@ function PaymentPage() {
           },
         }}
       >
-        <CheckoutForm />
+        <CheckoutForm orderDetails={orderDetails} />
       </Elements>
     </div>
   );
