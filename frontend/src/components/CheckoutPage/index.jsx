@@ -66,11 +66,11 @@ const MINIMUM_ORDER_AMOUNT = 10.0;
 const MAX_ITEMS_PER_ORDER = 20;
 
 const DELIVERY_SLOTS = [
-  "10:00 AM - 12:00 PM",
-  "12:00 PM - 2:00 PM",
-  "2:00 PM - 4:00 PM",
-  "4:00 PM - 6:00 PM",
-  "6:00 PM - 8:00 PM",
+  { display: "10:00 AM - 12:00 PM", value: "10:00" },
+  { display: "12:00 PM - 2:00 PM", value: "12:00" },
+  { display: "2:00 PM - 4:00 PM", value: "14:00" },
+  { display: "4:00 PM - 6:00 PM", value: "16:00" },
+  { display: "6:00 PM - 8:00 PM", value: "18:00" },
 ];
 
 const initialFormData = {
@@ -148,6 +148,18 @@ function CheckoutPage() {
       totalPrice: subtotal + DELIVERY_FEE,
     };
   }, [cart]);
+
+  if (!formData.deliveryTime) {
+    newErrors.deliveryTime = "Please select a delivery time";
+  } else {
+    const [hours, minutes] = formData.deliveryTime.split(":").map(Number);
+    const deliveryTime = new Date();
+    deliveryTime.setHours(hours, minutes, 0, 0);
+
+    if (deliveryTime <= new Date()) {
+      newErrors.deliveryTime = "Please select a future delivery time";
+    }
+  }
 
   // Quantity handlers
   const handleQuantityChange = useCallback(
@@ -242,6 +254,11 @@ function CheckoutPage() {
         const totalAmount = subtotal + DELIVERY_FEE;
         const amountInCents = Math.round(totalAmount * 100);
 
+        // Find the delivery slot display value
+        const selectedSlot = DELIVERY_SLOTS.find(
+          (slot) => slot.value === formData.deliveryTime
+        );
+
         navigate("/payment", {
           state: {
             orderDetails: {
@@ -259,13 +276,14 @@ function CheckoutPage() {
                 address: formData.street.trim(),
                 city: formData.city.trim(),
                 postcode: formData.postcode.toUpperCase().trim(),
-                deliveryTime: formData.deliveryTime,
+                deliveryTime: formData.deliveryTime, // This will now be in 24-hour format
                 specialInstructions: formData.specialInstructions.trim(),
               },
               subtotal: Number(subtotal.toFixed(2)),
               deliveryFee: DELIVERY_FEE,
-              totalAmount: amountInCents, // Send amount in cents
+              totalAmount: amountInCents,
               orderDate: new Date().toISOString(),
+              selectedTimeSlot: selectedSlot?.display || "", // Store display value if needed
             },
           },
         });
@@ -516,8 +534,8 @@ function CheckoutPage() {
               >
                 <option value="">Select delivery time</option>
                 {DELIVERY_SLOTS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
+                  <option key={slot.display} value={slot.value}>
+                    {slot.display}
                   </option>
                 ))}
               </select>

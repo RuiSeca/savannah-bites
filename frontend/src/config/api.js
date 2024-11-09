@@ -39,40 +39,58 @@ const validateOrderData = (orderData) => {
 
   const errors = [];
 
-  // Validate items
-  if (
-    !orderData.orderDetails?.items ||
-    !Array.isArray(orderData.orderDetails.items)
-  ) {
-    errors.push("Order must contain at least one item");
-  } else if (orderData.orderDetails.items.length === 0) {
-    errors.push("Order must contain at least one item");
+  // Validate payment intent ID
+  if (!orderData.paymentIntentId) {
+    errors.push("Payment intent ID is required");
   }
 
-  // Validate customer info
-  const customerInfo = orderData.orderDetails?.customer;
-  if (!customerInfo) {
+  // Validate order items
+  if (!Array.isArray(orderData.orderDetails)) {
+    errors.push("Order details must be an array");
+  } else if (orderData.orderDetails.length === 0) {
+    errors.push("Order must contain at least one item");
+  } else {
+    orderData.orderDetails.forEach((item, index) => {
+      if (!item.name) errors.push(`Item ${index + 1} is missing a name`);
+      if (!item.quantity || item.quantity <= 0)
+        errors.push(`Item ${index + 1} has invalid quantity`);
+      if (!item.price) errors.push(`Item ${index + 1} is missing a price`);
+    });
+  }
+
+  // Validate customer
+  if (!orderData.customer) {
     errors.push("Customer information is required");
   } else {
-    const { name, email, phone } = customerInfo;
+    const { name, email, phone } = orderData.customer;
     if (!name) errors.push("Customer name is required");
     if (!email) errors.push("Customer email is required");
     if (!phone) errors.push("Customer phone is required");
   }
 
   // Validate address
-  const address = orderData.orderDetails?.address;
-  if (!address) {
-    errors.push("Delivery address is required");
+  if (!orderData.address) {
+    errors.push("Address is required");
   } else {
-    const { street, city, postcode } = address;
+    const { street, city, postcode } = orderData.address;
     if (!street) errors.push("Street address is required");
     if (!city) errors.push("City is required");
     if (!postcode) errors.push("Postcode is required");
   }
 
+  // Validate amount
+  if (!orderData.amount) {
+    errors.push("Amount information is required");
+  } else {
+    const { subtotal, total, deliveryFee } = orderData.amount;
+    if (typeof subtotal !== "number") errors.push("Subtotal must be a number");
+    if (typeof total !== "number") errors.push("Total must be a number");
+    if (typeof deliveryFee !== "number")
+      errors.push("Delivery fee must be a number");
+  }
+
   // Validate delivery time
-  if (!orderData.orderDetails?.deliveryTime?.requested) {
+  if (!orderData.deliveryTime?.requested) {
     errors.push("Delivery time is required");
   }
 
@@ -194,7 +212,14 @@ export const paymentAPI = {
     try {
       validateOrderData(orderData);
 
+      console.log(
+        "Sending order data to API:",
+        JSON.stringify(orderData, null, 2)
+      );
+
       const response = await api.post("/api/orders", orderData);
+
+      console.log("API Response:", response.data);
 
       if (!response.data?.orderId) {
         throw new Error("Order creation failed: No order ID received");
@@ -205,7 +230,14 @@ export const paymentAPI = {
         status: response.data.status,
       };
     } catch (error) {
-      console.error("Order Creation Error:", error);
+      if (error.response?.data?.details) {
+        console.error("Validation errors:", error.response.data.details);
+        throw new APIError(
+          "Order validation failed: " + error.response.data.details.join(", "),
+          error.response.status,
+          error.response.data
+        );
+      }
       throw error instanceof APIError
         ? error
         : new APIError(
