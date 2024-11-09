@@ -16,17 +16,57 @@ const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 const DELIVERY_FEE = 2.5;
 
+const validateCartItem = (item) => {
+  if (!item) throw new Error("Invalid cart item");
+
+  const price = item.selectedPrice || item.price;
+  const quantity = item.quantity;
+
+  if (typeof price !== "number" || price <= 0) {
+    throw new Error(`Invalid price for item: ${item.name}`);
+  }
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    throw new Error(`Invalid quantity for item: ${item.name}`);
+  }
+
+  return true;
+};
+
 const calculateTotals = (cart) => {
-  const subtotal = cart.reduce(
-    (sum, item) => sum + (item.selectedPrice || item.price) * item.quantity,
-    0
-  );
+  console.log("Calculating totals for cart:", cart);
+
+  if (!Array.isArray(cart) || cart.length === 0) {
+    throw new Error("Cart is empty or invalid");
+  }
+
+  // Validate each cart item
+  cart.forEach(validateCartItem);
+
+  const subtotal = cart.reduce((sum, item) => {
+    const itemPrice = item.selectedPrice || item.price;
+    const quantity = item.quantity;
+    return sum + itemPrice * quantity;
+  }, 0);
+
+  if (isNaN(subtotal) || subtotal <= 0) {
+    throw new Error("Invalid subtotal calculated");
+  }
+
   const total = subtotal + DELIVERY_FEE;
+  const amountInCents = Math.round(total * 100);
+
+  console.log("Calculation results:", {
+    subtotal,
+    deliveryFee: DELIVERY_FEE,
+    total,
+    amountInCents,
+  });
+
   return {
     subtotal,
     deliveryFee: DELIVERY_FEE,
     total,
-    amountInCents: Math.round(total * 100), // For Stripe, should be positive
+    amountInCents,
   };
 };
 
@@ -42,17 +82,14 @@ function CheckoutForm() {
   const orderDetails = location.state?.orderDetails;
 
   useEffect(() => {
-    if (!orderDetails?.customerInfo || !cart.length) {
-      console.log(
-        "Missing order details or empty cart, redirecting to checkout"
-      );
+    if (!orderDetails?.customerInfo || !cart?.length) {
+      console.log("Missing requirements, redirecting to checkout");
       navigate("/checkout");
     }
   }, [orderDetails, cart, navigate]);
 
   const createOrder = async (paymentIntent) => {
     try {
-      console.log("Creating order...");
       const { subtotal, deliveryFee, amountInCents } = calculateTotals(cart);
 
       const orderData = {
@@ -72,7 +109,7 @@ function CheckoutForm() {
         },
       };
 
-      console.log("Sending order data:", orderData);
+      console.log("Creating order with data:", orderData);
       const response = await paymentAPI.createOrder(orderData);
       console.log("Order created successfully:", response);
       return response;
@@ -95,13 +132,11 @@ function CheckoutForm() {
       setIsProcessing(true);
       setError(null);
 
-      console.log("Submitting payment form...");
       const { error: submitError } = await elements.submit();
       if (submitError) {
         throw submitError;
       }
 
-      console.log("Confirming payment...");
       const { error: paymentError, paymentIntent } =
         await stripe.confirmPayment({
           elements,
@@ -125,12 +160,10 @@ function CheckoutForm() {
         });
 
       if (paymentError) {
-        console.error("Payment error:", paymentError);
         throw paymentError;
       }
 
       if (paymentIntent.status === "succeeded") {
-        console.log("Payment succeeded, creating order...");
         const { orderId } = await createOrder(paymentIntent);
         clearCart();
         navigate("/confirmation", {
@@ -150,7 +183,7 @@ function CheckoutForm() {
     }
   };
 
-  const { subtotal, deliveryFee, total } = calculateTotals(cart);
+  const totals = calculateTotals(cart);
 
   return (
     <div className="payment-container">
@@ -186,15 +219,15 @@ function CheckoutForm() {
           <div className="price-breakdown">
             <div className="price-row">
               <span>Subtotal</span>
-              <span>£{subtotal.toFixed(2)}</span>
+              <span>£{totals.subtotal.toFixed(2)}</span>
             </div>
             <div className="price-row">
               <span>Delivery Fee</span>
-              <span>£{deliveryFee.toFixed(2)}</span>
+              <span>£{totals.deliveryFee.toFixed(2)}</span>
             </div>
             <div className="price-row total">
               <span>Total to Pay</span>
-              <span>£{total.toFixed(2)}</span>
+              <span>£{totals.total.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -252,7 +285,7 @@ function CheckoutForm() {
                 <span>Processing...</span>
               </>
             ) : (
-              <span>Pay £{total.toFixed(2)}</span>
+              <span>Pay £{totals.total.toFixed(2)}</span>
             )}
           </div>
         </button>
@@ -275,19 +308,20 @@ function PaymentPage() {
   const orderDetails = location.state?.orderDetails;
 
   useEffect(() => {
-    if (!orderDetails || !cart?.length) {
-      console.log("Invalid payment page access, redirecting to checkout");
-      navigate("/checkout");
-      return;
-    }
-
-    const createPaymentIntent = async () => {
+    const initializePayment = async () => {
       try {
-        console.log("Creating payment intent...");
+        console.log("Initializing payment with cart:", cart);
+
+        if (!cart?.length || !orderDetails?.customerInfo) {
+          throw new Error("Missing required payment information");
+        }
+
         const { amountInCents } = calculateTotals(cart);
 
+        console.log("Creating payment intent with amount:", amountInCents);
+
         const response = await paymentAPI.createPaymentIntent({
-          amount: amountInCents, // Sending amount in cents to Stripe
+          amount: amountInCents,
           currency: "gbp",
           metadata: {
             customerName: orderDetails.customerInfo.name,
@@ -295,19 +329,14 @@ function PaymentPage() {
           },
         });
 
-        console.log("Payment intent created:", response);
         setClientSecret(response.clientSecret);
       } catch (error) {
-        console.error("Payment setup error:", error);
-        setError(
-          error.data?.message ||
-            error.message ||
-            "Failed to setup payment. Please try again."
-        );
+        console.error("Payment initialization failed:", error);
+        setError(error.message);
       }
     };
 
-    createPaymentIntent();
+    initializePayment();
   }, [cart, orderDetails, navigate]);
 
   if (error) {
