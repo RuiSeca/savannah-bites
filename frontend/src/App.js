@@ -115,20 +115,14 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <Routes>{/* Your app routes here */}</Routes>
-      <ScrollToTopButton />
-    </Router>
-  );
-}
-
-export default function App() {
-  return (
-    <Router>
       <CartProvider>
         <Elements stripe={stripePromise}>
-          <AppContent />
+          <Routes>{/* Your app routes here */}</Routes>
+          <ScrollToTopButton />
         </Elements>
       </CartProvider>
     </Router>
   );
 }
+
+export default App;
