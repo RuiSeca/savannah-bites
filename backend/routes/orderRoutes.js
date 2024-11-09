@@ -27,33 +27,24 @@ const parseDeliveryTime = (timeString) => {
 // Create payment intent
 router.post("/create-payment-intent", async (req, res) => {
   try {
+    console.log("Received payment intent request:", req.body);
     const { amount } = req.body;
 
-    // Log the received amount
-    console.log("Received amount:", amount);
-
-    // Validate amount
-    if (!amount || typeof amount !== "number" || amount <= 0) {
-      console.error("Invalid amount:", amount);
+    if (!amount || !Number.isInteger(amount) || amount <= 0) {
       return res.status(400).json({
         status: "error",
-        error: "Invalid amount provided: amount must be a positive number",
+        error: "Invalid amount provided: amount must be a positive integer",
       });
     }
 
-    // Ensure amount is an integer (whole number of cents)
-    const roundedAmount = Math.round(amount);
-    console.log("Creating payment intent with amount:", roundedAmount);
-
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: roundedAmount,
+      amount: amount,
       currency: "gbp",
       automatic_payment_methods: {
         enabled: true,
       },
     });
 
-    console.log("Payment intent created successfully");
     res.json({
       status: "success",
       clientSecret: paymentIntent.client_secret,

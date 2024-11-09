@@ -3,7 +3,7 @@ import axios from "axios";
 
 // Environment and Configuration
 const API_CONFIG = {
-  baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:5000",
+  baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api",
   timeout: 15000,
   retryAttempts: 3,
   retryDelay: 1000,
@@ -24,21 +24,46 @@ class APIError extends Error {
 
 // Validation Functions
 const validateAmount = (amount) => {
-  if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
+  if (!amount || typeof amount !== "number" || isNaN(amount) || amount <= 0) {
     throw new Error(
       "Invalid amount provided: amount must be a positive number"
     );
+  }
+  if (!Number.isInteger(amount)) {
+    throw new Error("Amount must be in cents (integer)");
   }
   return true;
 };
 
 const validateOrderData = (orderData) => {
-  if (!orderData) throw new Error("Order data is required");
-  if (!orderData.items || !Array.isArray(orderData.items)) {
-    throw new Error("Order must contain items array");
+  const errors = [];
+
+  if (!orderData) {
+    throw new Error("Order data is required");
   }
-  if (!orderData.customerInfo)
-    throw new Error("Customer information is required");
+
+  if (
+    !orderData.items ||
+    !Array.isArray(orderData.items) ||
+    orderData.items.length === 0
+  ) {
+    errors.push("Order must contain at least one item");
+  }
+
+  if (!orderData.customerInfo) {
+    errors.push("Customer information is required");
+  } else {
+    const { name, email, phone, address } = orderData.customerInfo;
+    if (!name) errors.push("Customer name is required");
+    if (!email) errors.push("Customer email is required");
+    if (!phone) errors.push("Customer phone is required");
+    if (!address) errors.push("Delivery address is required");
+  }
+
+  if (errors.length > 0) {
+    throw new Error(errors.join(", "));
+  }
+
   return true;
 };
 
@@ -100,20 +125,17 @@ api.interceptors.response.use(
 
     // Error handling
     if (error.response) {
-      // Server responded with error status
       console.error("API Response Error:", {
         status: error.response.status,
         data: error.response.data,
         url: originalRequest.url,
       });
     } else if (error.request) {
-      // Request made but no response
       console.error("API No Response:", {
         request: error.request,
         url: originalRequest.url,
       });
     } else {
-      // Request setup error
       console.error("API Request Setup Error:", error.message);
     }
 
@@ -133,13 +155,21 @@ export const paymentAPI = {
     try {
       validateAmount(data.amount);
 
+      console.log("Creating payment intent with data:", {
+        amount: data.amount,
+        currency: data.currency || "gbp",
+      });
+
       const response = await api.post("/orders/create-payment-intent", {
         amount: data.amount,
         currency: data.currency || "gbp",
-        metadata: data.metadata || {},
+        metadata: {
+          ...data.metadata,
+          timestamp: new Date().toISOString(),
+        },
       });
 
-      if (!response.data.clientSecret) {
+      if (!response.data?.clientSecret) {
         throw new Error(
           "No client secret received from payment intent creation"
         );
@@ -147,8 +177,14 @@ export const paymentAPI = {
 
       return response.data;
     } catch (error) {
-      console.error("Payment Intent Creation Error:", error);
-      throw error.response?.data || error;
+      console.error("Payment API Error:", error);
+      throw error instanceof APIError
+        ? error
+        : new APIError(
+            error.message,
+            error.response?.status || 500,
+            error.response?.data
+          );
     }
   },
 
@@ -157,56 +193,27 @@ export const paymentAPI = {
       validateOrderData(orderData);
 
       const response = await api.post("/orders", orderData);
+
+      if (!response.data?.orderId) {
+        throw new Error("Order creation failed: No order ID received");
+      }
+
       return response.data;
     } catch (error) {
       console.error("Order Creation Error:", error);
-      throw error.response?.data || error;
-    }
-  },
-
-  confirmPayment: async (paymentIntentId) => {
-    try {
-      if (!paymentIntentId) throw new Error("Payment Intent ID is required");
-
-      const response = await api.post("/orders/confirm-payment", {
-        paymentIntentId,
-      });
-      return response.data;
-    } catch (error) {
-      console.error("Payment Confirmation Error:", error);
-      throw error.response?.data || error;
-    }
-  },
-
-  getPaymentStatus: async (paymentIntentId) => {
-    try {
-      if (!paymentIntentId) throw new Error("Payment Intent ID is required");
-
-      const response = await api.get(
-        `/orders/payment-status/${paymentIntentId}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Payment Status Check Error:", error);
-      throw error.response?.data || error;
+      throw error instanceof APIError
+        ? error
+        : new APIError(
+            error.message,
+            error.response?.status || 500,
+            error.response?.data
+          );
     }
   },
 };
 
 // Order API
 export const orderAPI = {
-  create: async (orderData) => {
-    try {
-      validateOrderData(orderData);
-
-      const response = await api.post("/orders", orderData);
-      return response.data;
-    } catch (error) {
-      console.error("Order Creation Error:", error);
-      throw error.response?.data || error;
-    }
-  },
-
   getStatus: async (orderId) => {
     try {
       if (!orderId) throw new Error("Order ID is required");
@@ -215,7 +222,13 @@ export const orderAPI = {
       return response.data;
     } catch (error) {
       console.error("Order Status Check Error:", error);
-      throw error.response?.data || error;
+      throw error instanceof APIError
+        ? error
+        : new APIError(
+            error.message,
+            error.response?.status || 500,
+            error.response?.data
+          );
     }
   },
 
@@ -225,7 +238,13 @@ export const orderAPI = {
       return response.data;
     } catch (error) {
       console.error("Order History Error:", error);
-      throw error.response?.data || error;
+      throw error instanceof APIError
+        ? error
+        : new APIError(
+            error.message,
+            error.response?.status || 500,
+            error.response?.data
+          );
     }
   },
 
@@ -238,7 +257,13 @@ export const orderAPI = {
       return response.data;
     } catch (error) {
       console.error("Order Status Update Error:", error);
-      throw error.response?.data || error;
+      throw error instanceof APIError
+        ? error
+        : new APIError(
+            error.message,
+            error.response?.status || 500,
+            error.response?.data
+          );
     }
   },
 
@@ -250,7 +275,13 @@ export const orderAPI = {
       return response.data;
     } catch (error) {
       console.error("Order Cancellation Error:", error);
-      throw error.response?.data || error;
+      throw error instanceof APIError
+        ? error
+        : new APIError(
+            error.message,
+            error.response?.status || 500,
+            error.response?.data
+          );
     }
   },
 };
@@ -268,6 +299,7 @@ export const checkAPIHealth = async () => {
       status: response.data.status,
       timestamp: new Date().toISOString(),
       environment: API_CONFIG.environment,
+      version: API_CONFIG.version,
     };
   } catch (error) {
     return {
@@ -275,6 +307,7 @@ export const checkAPIHealth = async () => {
       error: error.message,
       timestamp: new Date().toISOString(),
       environment: API_CONFIG.environment,
+      version: API_CONFIG.version,
     };
   }
 };
