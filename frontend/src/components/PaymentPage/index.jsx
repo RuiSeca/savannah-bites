@@ -21,11 +21,12 @@ const calculateTotals = (cart) => {
     (sum, item) => sum + (item.selectedPrice || item.price) * item.quantity,
     0
   );
+  const total = subtotal + DELIVERY_FEE;
   return {
     subtotal,
     deliveryFee: DELIVERY_FEE,
-    total: subtotal + DELIVERY_FEE,
-    amountInCents: Math.round((subtotal + DELIVERY_FEE) * 100), // For Stripe
+    total,
+    amountInCents: Math.round(total * 100), // For Stripe, should be positive
   };
 };
 
