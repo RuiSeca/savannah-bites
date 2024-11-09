@@ -33,34 +33,26 @@ const validateCartItem = (item) => {
 };
 
 const calculateTotals = (cart) => {
-  console.log("Calculating totals for cart:", cart);
-
   if (!Array.isArray(cart) || cart.length === 0) {
     throw new Error("Cart is empty or invalid");
   }
 
-  // Validate each cart item
-  cart.forEach(validateCartItem);
-
   const subtotal = cart.reduce((sum, item) => {
-    const itemPrice = item.selectedPrice || item.price;
-    const quantity = item.quantity;
-    return sum + itemPrice * quantity;
+    const price = parseFloat(item.selectedPrice || item.price);
+    const quantity = parseInt(item.quantity, 10);
+
+    if (isNaN(price) || price <= 0) {
+      throw new Error(`Invalid price for item: ${item.name}`);
+    }
+    if (isNaN(quantity) || quantity <= 0) {
+      throw new Error(`Invalid quantity for item: ${item.name}`);
+    }
+
+    return sum + price * quantity;
   }, 0);
 
-  if (isNaN(subtotal) || subtotal <= 0) {
-    throw new Error("Invalid subtotal calculated");
-  }
-
   const total = subtotal + DELIVERY_FEE;
-  const amountInCents = Math.round(total * 100);
-
-  console.log("Calculation results:", {
-    subtotal,
-    deliveryFee: DELIVERY_FEE,
-    total,
-    amountInCents,
-  });
+  const amountInCents = Math.round(total * 100); // Convert to cents only once
 
   return {
     subtotal,
@@ -310,18 +302,15 @@ function PaymentPage() {
   useEffect(() => {
     const initializePayment = async () => {
       try {
-        console.log("Initializing payment with cart:", cart);
-
         if (!cart?.length || !orderDetails?.customerInfo) {
           throw new Error("Missing required payment information");
         }
 
-        const { amountInCents } = calculateTotals(cart);
-
-        console.log("Creating payment intent with amount:", amountInCents);
+        const totals = calculateTotals(cart);
+        console.log("Sending to API - amount in cents:", totals.amountInCents);
 
         const response = await paymentAPI.createPaymentIntent({
-          amount: amountInCents,
+          amount: totals.amountInCents, // This is already in cents
           currency: "gbp",
           metadata: {
             customerName: orderDetails.customerInfo.name,
