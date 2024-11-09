@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { format } from "date-fns";
 import ProgressStepsReservation from "../ProgressStepsReservation";
-import "./ReservationPage.css";
+import "./styles.css";
 
-// Constants
+// API Configuration
 const API_CONFIG = {
   baseURL:
     process.env.NODE_ENV === "development"
@@ -17,22 +17,15 @@ const API_CONFIG = {
   },
 };
 
+// Constants
 const TIME_SLOTS = [
-  { label: "11:00 AM", value: "11:00" },
-  { label: "1:00 PM", value: "13:00" },
-  { label: "3:00 PM", value: "15:00" },
-  { label: "5:00 PM", value: "17:00" },
-  { label: "7:00 PM", value: "19:00" },
-  { label: "9:00 PM", value: "21:00" },
+  { id: 1, label: "11:00 AM", value: "11:00" },
+  { id: 2, label: "1:00 PM", value: "13:00" },
+  { id: 3, label: "3:00 PM", value: "15:00" },
+  { id: 4, label: "5:00 PM", value: "17:00" },
+  { id: 5, label: "7:00 PM", value: "19:00" },
+  { id: 6, label: "9:00 PM", value: "21:00" },
 ];
-
-const INITIAL_FORM_STATE = {
-  guests: "",
-  name: "",
-  email: "",
-  phone: "",
-  allergies: "",
-};
 
 const GUEST_OPTIONS = [
   { value: "1", label: "1 person" },
@@ -43,6 +36,14 @@ const GUEST_OPTIONS = [
   { value: "6", label: "6 people" },
   { value: "7+", label: "7 or more (we'll contact you)" },
 ];
+
+const INITIAL_FORM_STATE = {
+  guests: "",
+  name: "",
+  email: "",
+  phone: "",
+  allergies: "",
+};
 
 // API instance
 const api = axios.create({
@@ -55,9 +56,9 @@ const api = axios.create({
 
 const ReservationPage = () => {
   const navigate = useNavigate();
-  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
-  // State management with proper types
+  // State
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTime, setSelectedTime] = useState("");
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
@@ -66,10 +67,24 @@ const ReservationPage = () => {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch available tables with proper error handling
-  const fetchAvailableTables = useCallback(async (date) => {
-    const controller = new AbortController();
+  // Format selected date for display
+  const formattedDate = useMemo(() => {
+    if (!selectedDate) return "";
+    return format(new Date(selectedDate), "EEEE, MMMM d, yyyy");
+  }, [selectedDate]);
 
+  // Format selected time for display
+  const formattedTime = useMemo(() => {
+    if (!selectedTime) return "";
+    const timeSlot = TIME_SLOTS.find((slot) => slot.value === selectedTime);
+    return timeSlot ? timeSlot.label : "";
+  }, [selectedTime]);
+
+  // Fetch available tables
+  const fetchAvailableTables = useCallback(async (date) => {
+    if (!date) return;
+
+    const controller = new AbortController();
     try {
       setLoading(true);
       setError("");
@@ -84,7 +99,7 @@ const ReservationPage = () => {
       if (response.data.status === "success" && response.data.availability) {
         setAvailableTables(response.data.availability);
       } else {
-        // Default availability if no data
+        // Set default availability
         const defaultAvailability = TIME_SLOTS.reduce((acc, slot) => {
           acc[slot.value] = 10;
           return acc;
@@ -103,14 +118,12 @@ const ReservationPage = () => {
     return () => controller.abort();
   }, []);
 
+  // Fetch available tables when date changes
   useEffect(() => {
-    if (selectedDate) {
-      const timeoutId = setTimeout(
-        () => fetchAvailableTables(selectedDate),
-        300
-      );
-      return () => clearTimeout(timeoutId);
-    }
+    const timeoutId = selectedDate
+      ? setTimeout(() => fetchAvailableTables(selectedDate), 300)
+      : null;
+    return () => timeoutId && clearTimeout(timeoutId);
   }, [selectedDate, fetchAvailableTables]);
 
   // Form validation
@@ -123,12 +136,14 @@ const ReservationPage = () => {
     if (!formData.phone.trim()) return "Please enter your phone number";
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email.trim()))
+    if (!emailRegex.test(formData.email.trim())) {
       return "Please enter a valid email address";
+    }
 
     const phoneRegex = /^[\d\s-+()]{10,}$/;
-    if (!phoneRegex.test(formData.phone.replace(/\s+/g, "")))
+    if (!phoneRegex.test(formData.phone.replace(/\s+/g, ""))) {
       return "Please enter a valid phone number";
+    }
 
     return null;
   }, [selectedDate, selectedTime, formData]);
@@ -152,12 +167,12 @@ const ReservationPage = () => {
 
   const handleDateChange = useCallback((e) => {
     const newDate = new Date(e.target.value);
-    const today = new Date();
+    const currentDate = new Date();
 
-    today.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
     newDate.setHours(0, 0, 0, 0);
 
-    if (newDate >= today) {
+    if (newDate >= currentDate) {
       setSelectedDate(e.target.value);
       setSelectedTime("");
     } else {
@@ -197,6 +212,8 @@ const ReservationPage = () => {
               ...reservationData,
               id: response.data.data.reservationId,
               status: response.data.data.status,
+              formattedDate,
+              formattedTime,
             },
           },
         });
@@ -216,30 +233,6 @@ const ReservationPage = () => {
       setSubmitting(false);
     }
   };
-
-  // Render functions
-  const renderTimeSlots = useCallback(
-    () => (
-      <div className="time-slots-grid">
-        {TIME_SLOTS.map(({ label, value }) => (
-          <button
-            key={value}
-            type="button"
-            className={`time-slot ${selectedTime === value ? "selected" : ""} 
-                     ${availableTables[value] === 0 ? "full" : ""}`}
-            onClick={() => handleTimeSlotClick(value)}
-            disabled={availableTables[value] === 0}
-          >
-            <span className="time">{label}</span>
-            <span className="tables-left">
-              {availableTables[value] || 0} tables available
-            </span>
-          </button>
-        ))}
-      </div>
-    ),
-    [selectedTime, availableTables, handleTimeSlotClick]
-  );
 
   return (
     <div className="reservation-page">
@@ -273,6 +266,9 @@ const ReservationPage = () => {
                   onChange={handleDateChange}
                   className="date-input"
                 />
+                {selectedDate && (
+                  <span className="selected-date">{formattedDate}</span>
+                )}
               </div>
             </div>
 
@@ -284,7 +280,23 @@ const ReservationPage = () => {
                     Loading available times...
                   </div>
                 ) : (
-                  renderTimeSlots()
+                  <div className="time-slots-grid">
+                    {TIME_SLOTS.map(({ id, label, value }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        className={`time-slot ${selectedTime === value ? "selected" : ""} 
+                                   ${availableTables[value] === 0 ? "full" : ""}`}
+                        onClick={() => handleTimeSlotClick(value)}
+                        disabled={availableTables[value] === 0}
+                      >
+                        <span className="time">{label}</span>
+                        <span className="tables-left">
+                          {availableTables[value] || 0} tables available
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -369,6 +381,12 @@ const ReservationPage = () => {
               </div>
             </div>
           </section>
+
+          {selectedDate && selectedTime && (
+            <div className="reservation-summary">
+              Booking for: {formattedDate} at {formattedTime}
+            </div>
+          )}
 
           <div className="form-actions">
             <button
