@@ -203,26 +203,26 @@ export const paymentAPI = {
     }
   },
 
-  createOrder: async (orderData) => {
+  createOrder: async (data) => {
     try {
-      validateOrderData(orderData);
-
-      const response = await api.post("/orders", orderData);
+      console.log("Creating order with data:", data);
+      const response = await api.post("/orders", data);
 
       if (!response.data?.orderId) {
         throw new Error("Order creation failed: No order ID received");
       }
 
-      return response.data;
+      return {
+        orderId: response.data.orderId,
+        status: response.data.status,
+      };
     } catch (error) {
       console.error("Order Creation Error:", error);
-      throw error instanceof APIError
-        ? error
-        : new APIError(
-            error.message,
-            error.response?.status || 500,
-            error.response?.data
-          );
+      throw new APIError(
+        error.response?.data?.message || error.message,
+        error.response?.status || 500,
+        error.response?.data
+      );
     }
   },
 };

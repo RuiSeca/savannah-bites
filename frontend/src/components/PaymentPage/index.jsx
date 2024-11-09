@@ -225,6 +225,7 @@ function CheckoutForm({ orderDetails, clientSecret }) {
       setIsProcessing(true);
       setError(null);
 
+      // Validate cart and calculate totals
       const totals = validateCartAndCalculateTotals(cart);
       console.log("Processing payment for amount:", totals.amountInCents);
 
@@ -238,7 +239,6 @@ function CheckoutForm({ orderDetails, clientSecret }) {
       const { error: paymentError, paymentIntent } =
         await stripe.confirmPayment({
           elements,
-          redirect: "if_required",
           confirmParams: {
             return_url: `${window.location.origin}/confirmation`,
             payment_method_data: {
@@ -255,67 +255,37 @@ function CheckoutForm({ orderDetails, clientSecret }) {
               },
             },
           },
+          redirect: "if_required",
         });
 
       if (paymentError) {
-        throw new Error(paymentError.message);
+        console.error("Payment confirmation error:", paymentError);
+        throw new Error(paymentError.message || "Payment failed");
       }
 
       if (paymentIntent.status === "succeeded") {
-        // Create order after successful payment
-        const orderData = {
-          customer: {
-            name: orderDetails.customerInfo.name,
-            email: orderDetails.customerInfo.email.toLowerCase().trim(),
-            phone: orderDetails.customerInfo.phone,
-          },
-          orderDetails: cart.map((item) => ({
-            item: item._id || item.id,
-            name: item.name,
-            quantity: parseInt(item.quantity, 10),
-            price: Number(item.selectedPrice || item.price),
-            size: item.size || "regular",
-          })),
-          address: {
-            street: orderDetails.customerInfo.address.trim(),
-            city: orderDetails.customerInfo.city.trim(),
-            postcode: orderDetails.customerInfo.postcode.trim().toUpperCase(),
-          },
-          amount: {
-            subtotal: totals.subtotal,
-            deliveryFee: totals.deliveryFee,
-            total: totals.total,
-            discount: 0,
-          },
-          paymentDetails: {
-            paymentIntentId: paymentIntent.id,
-            method: "card",
-            status: paymentIntent.status,
-          },
-          deliveryTime: {
-            requested: parseDeliveryDateTime(
-              orderDetails.customerInfo.deliveryTime
-            ),
-          },
-          specialInstructions:
-            orderDetails.customerInfo.specialInstructions || "",
-        };
+        try {
+          const { orderId } = await createOrder(paymentIntent);
+          clearCart();
 
-        const response = await paymentAPI.createOrder(orderData);
-        clearCart();
+          // Store the IDs in session storage
+          sessionStorage.setItem("orderId", orderId);
+          sessionStorage.setItem("paymentIntentId", paymentIntent.id);
 
-        // Store order information in sessionStorage as backup
-        sessionStorage.setItem("orderId", response.orderId);
-        sessionStorage.setItem("paymentIntentId", paymentIntent.id);
-
-        // Navigate to confirmation page
-        navigate("/confirmation", {
-          state: {
-            orderId: response.orderId,
-            paymentIntentId: paymentIntent.id,
-          },
-          replace: true,
-        });
+          // Navigate to confirmation page
+          navigate("/confirmation", {
+            state: {
+              orderId,
+              paymentIntentId: paymentIntent.id,
+            },
+            replace: true,
+          });
+        } catch (orderError) {
+          console.error("Order creation error:", orderError);
+          throw new Error(
+            `Payment successful but order creation failed: ${orderError.message}`
+          );
+        }
       } else {
         throw new Error(`Unexpected payment status: ${paymentIntent.status}`);
       }
