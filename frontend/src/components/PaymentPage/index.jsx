@@ -9,13 +9,25 @@ import { loadStripe } from "@stripe/stripe-js";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import ProgressSteps from "../ProgressSteps/index.jsx";
-import { paymentAPI } from "../../config/api"; // Only import what you need
+import { paymentAPI } from "../../config/api";
 import "./styles.css";
 
-// Stripe initialization
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 const DELIVERY_FEE = 2.5;
+
+const calculateTotals = (cart) => {
+  const subtotal = cart.reduce(
+    (sum, item) => sum + (item.selectedPrice || item.price) * item.quantity,
+    0
+  );
+  return {
+    subtotal,
+    deliveryFee: DELIVERY_FEE,
+    total: subtotal + DELIVERY_FEE,
+    amountInCents: Math.round((subtotal + DELIVERY_FEE) * 100), // For Stripe
+  };
+};
 
 function CheckoutForm() {
   const stripe = useStripe();
@@ -28,7 +40,6 @@ function CheckoutForm() {
 
   const orderDetails = location.state?.orderDetails;
 
-  // Validate order details
   useEffect(() => {
     if (!orderDetails?.customerInfo || !cart.length) {
       console.log(
@@ -38,22 +49,10 @@ function CheckoutForm() {
     }
   }, [orderDetails, cart, navigate]);
 
-  const calculateTotals = () => {
-    const subtotal = cart.reduce(
-      (sum, item) => sum + (item.selectedPrice || item.price) * item.quantity,
-      0
-    );
-    return {
-      subtotal,
-      deliveryFee: DELIVERY_FEE,
-      total: Math.round((subtotal + DELIVERY_FEE) * 100), // Convert to cents (GBP)
-    };
-  };
-
   const createOrder = async (paymentIntent) => {
     try {
       console.log("Creating order...");
-      const { subtotal, deliveryFee, total } = calculateTotals();
+      const { subtotal, deliveryFee, amountInCents } = calculateTotals(cart);
 
       const orderData = {
         paymentIntentId: paymentIntent.id,
@@ -67,7 +66,7 @@ function CheckoutForm() {
           })),
           subtotal,
           deliveryFee,
-          totalAmount: total,
+          totalAmount: amountInCents,
           customerInfo: orderDetails.customerInfo,
         },
       };
@@ -150,7 +149,7 @@ function CheckoutForm() {
     }
   };
 
-  const { subtotal, total } = calculateTotals();
+  const { subtotal, deliveryFee, total } = calculateTotals(cart);
 
   return (
     <div className="payment-container">
@@ -190,7 +189,7 @@ function CheckoutForm() {
             </div>
             <div className="price-row">
               <span>Delivery Fee</span>
-              <span>£{DELIVERY_FEE.toFixed(2)}</span>
+              <span>£{deliveryFee.toFixed(2)}</span>
             </div>
             <div className="price-row total">
               <span>Total to Pay</span>
@@ -281,22 +280,17 @@ function PaymentPage() {
       return;
     }
 
-    const { total } = calculateTotals();
-    const updateOrderDetails = {
-      ...orderDetails,
-      totalAmount: total,
-    };
-
     const createPaymentIntent = async () => {
       try {
         console.log("Creating payment intent...");
+        const { amountInCents } = calculateTotals(cart);
 
         const response = await paymentAPI.createPaymentIntent({
-          amount: updateOrderDetails.totalAmount,
+          amount: amountInCents, // Sending amount in cents to Stripe
           currency: "gbp",
           metadata: {
-            customerName: updateOrderDetails.customerInfo.name,
-            customerEmail: updateOrderDetails.customerInfo.email,
+            customerName: orderDetails.customerInfo.name,
+            customerEmail: orderDetails.customerInfo.email,
           },
         });
 
