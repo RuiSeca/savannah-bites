@@ -23,7 +23,7 @@ const validateCartItem = (item) => {
   const price = Number(item.selectedPrice || item.price);
   const quantity = Number(item.quantity);
 
-  if (typeof price !== "number" || isNaN(price) || price <= 0) {
+  if (isNaN(price) || price <= 0) {
     throw new Error(`Invalid price for item: ${item.name}`);
   }
   if (!Number.isInteger(quantity) || quantity <= 0) {
@@ -38,25 +38,16 @@ const validateCartAndCalculateTotals = (cart) => {
     throw new Error("Cart is empty or invalid");
   }
 
-  // Validate and calculate each item
   const itemTotals = cart.map((item) => {
     const { price, quantity } = validateCartItem(item);
     return price * quantity;
   });
 
-  // Calculate totals
   const subtotal = Number(
     itemTotals.reduce((sum, total) => sum + total, 0).toFixed(2)
   );
   const total = Number((subtotal + DELIVERY_FEE).toFixed(2));
   const amountInCents = Math.round(total * 100);
-
-  console.log("Payment calculations:", {
-    subtotal,
-    deliveryFee: DELIVERY_FEE,
-    total,
-    amountInCents,
-  });
 
   return {
     subtotal,
@@ -84,39 +75,22 @@ const validateCustomerInfo = (customerInfo) => {
     throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
   }
 
-  // Validate email format
+  // Email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(customerInfo.email)) {
     throw new Error("Invalid email format");
   }
 
-  // Validate UK postcode
+  // UK postcode validation
   const postcodeRegex = /^[A-Z]{1,2}[0-9][A-Z0-9]?\s?[0-9][A-Z]{2}$/i;
   if (!postcodeRegex.test(customerInfo.postcode.trim())) {
     throw new Error("Invalid UK postcode format");
   }
 
-  // Validate phone number
+  // Phone validation
   const phoneRegex = /^[\d\s-+()]{10,}$/;
   if (!phoneRegex.test(customerInfo.phone.replace(/\s+/g, ""))) {
     throw new Error("Invalid phone number format");
-  }
-};
-
-const parseDeliveryDateTime = (timeString) => {
-  try {
-    const [hours, minutes] = timeString.split(":").map(Number);
-    const deliveryDate = new Date();
-    deliveryDate.setHours(hours, minutes, 0, 0);
-
-    // If the time has already passed today, set it for tomorrow
-    if (deliveryDate <= new Date()) {
-      deliveryDate.setDate(deliveryDate.getDate() + 1);
-    }
-
-    return deliveryDate;
-  } catch (error) {
-    throw new Error("Invalid delivery time format");
   }
 };
 
@@ -127,98 +101,6 @@ function CheckoutForm({ orderDetails, clientSecret }) {
   const { cart, clearCart } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!orderDetails?.customerInfo || !cart?.length) {
-      console.log("Missing requirements, redirecting to checkout");
-      navigate("/checkout");
-    }
-  }, [orderDetails, cart, navigate]);
-
-  const createOrder = useCallback(
-    async (paymentIntent) => {
-      try {
-        console.log("Creating order with payment intent:", paymentIntent.id);
-
-        if (!cart?.length) {
-          throw new Error("Cart is empty or invalid");
-        }
-
-        validateCustomerInfo(orderDetails.customerInfo);
-        const totals = validateCartAndCalculateTotals(cart);
-
-        // Format the delivery time
-        const deliveryDate = parseDeliveryDateTime(
-          orderDetails.customerInfo.deliveryTime
-        );
-
-        // Create the order data structure exactly matching your mongoose model
-        const orderData = {
-          paymentIntentId: paymentIntent.id,
-          orderDetails: [
-            ...cart.map((item) => ({
-              item: item._id || item.id,
-              name: item.name,
-              quantity: parseInt(item.quantity, 10),
-              price: Number(item.selectedPrice || item.price),
-              size: item.size || "regular",
-            })),
-          ],
-          customer: {
-            name: orderDetails.customerInfo.name,
-            email: orderDetails.customerInfo.email.toLowerCase().trim(),
-            phone: orderDetails.customerInfo.phone,
-          },
-          address: {
-            street: orderDetails.customerInfo.address.trim(),
-            city: orderDetails.customerInfo.city.trim(),
-            postcode: orderDetails.customerInfo.postcode.trim().toUpperCase(),
-          },
-          amount: {
-            subtotal: totals.subtotal,
-            deliveryFee: totals.deliveryFee,
-            total: totals.total,
-            discount: 0,
-          },
-          paymentDetails: {
-            paymentIntentId: paymentIntent.id,
-            method: "card",
-            status: "succeeded",
-          },
-          deliveryTime: {
-            requested: deliveryDate,
-          },
-          specialInstructions:
-            orderDetails.customerInfo.specialInstructions || "",
-          orderStatus: {
-            current: "pending",
-            history: [
-              {
-                status: "pending",
-                timestamp: new Date(),
-                note: "Order placed",
-              },
-            ],
-          },
-        };
-
-        // Log the exact data being sent
-        console.log("Sending order data:", JSON.stringify(orderData, null, 2));
-
-        const response = await paymentAPI.createOrder(orderData);
-        console.log("Order created successfully:", response);
-        return response;
-      } catch (error) {
-        console.error("Order creation failed:", error);
-        // Log the full error details
-        if (error.data) {
-          console.error("Error details:", error.data);
-        }
-        throw error;
-      }
-    },
-    [cart, orderDetails]
-  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -231,17 +113,15 @@ function CheckoutForm({ orderDetails, clientSecret }) {
       setIsProcessing(true);
       setError(null);
 
-      // Validate cart and calculate totals
       const totals = validateCartAndCalculateTotals(cart);
-      console.log("Processing payment for amount:", totals.amountInCents);
 
-      // Submit the form first
+      // Submit the payment form
       const { error: submitError } = await elements.submit();
       if (submitError) {
         throw new Error(`Payment submission failed: ${submitError.message}`);
       }
 
-      // Confirm the payment
+      // Confirm payment
       const { error: paymentError, paymentIntent } =
         await stripe.confirmPayment({
           elements,
@@ -265,20 +145,61 @@ function CheckoutForm({ orderDetails, clientSecret }) {
         });
 
       if (paymentError) {
-        console.error("Payment confirmation error:", paymentError);
         throw new Error(paymentError.message || "Payment failed");
       }
 
       if (paymentIntent.status === "succeeded") {
         try {
-          const { orderId } = await createOrder(paymentIntent);
+          const orderData = {
+            paymentIntentId: paymentIntent.id,
+            orderDetails: cart.map((item) => ({
+              item: item._id || item.id,
+              name: item.name,
+              quantity: parseInt(item.quantity, 10),
+              price: Number(item.selectedPrice || item.price),
+              size: item.size || "regular",
+            })),
+            customer: {
+              name: orderDetails.customerInfo.name,
+              email: orderDetails.customerInfo.email.toLowerCase().trim(),
+              phone: orderDetails.customerInfo.phone,
+            },
+            address: {
+              street: orderDetails.customerInfo.address.trim(),
+              city: orderDetails.customerInfo.city.trim(),
+              postcode: orderDetails.customerInfo.postcode.toUpperCase().trim(),
+            },
+            amount: {
+              subtotal: totals.subtotal,
+              deliveryFee: totals.deliveryFee,
+              total: totals.total,
+              discount: 0,
+            },
+            deliveryTime: {
+              requested: new Date(orderDetails.customerInfo.deliveryTime),
+            },
+            specialInstructions:
+              orderDetails.customerInfo.specialInstructions || "",
+            orderStatus: {
+              current: "pending",
+              history: [
+                {
+                  status: "pending",
+                  timestamp: new Date(),
+                  note: "Order placed",
+                },
+              ],
+            },
+          };
+
+          const { orderId } = await paymentAPI.createOrder(orderData);
           clearCart();
 
-          // Store the IDs in session storage
+          // Store order information
           sessionStorage.setItem("orderId", orderId);
           sessionStorage.setItem("paymentIntentId", paymentIntent.id);
 
-          // Navigate to confirmation page
+          // Navigate to confirmation
           navigate("/confirmation", {
             state: {
               orderId,
@@ -287,16 +208,13 @@ function CheckoutForm({ orderDetails, clientSecret }) {
             replace: true,
           });
         } catch (orderError) {
-          console.error("Order creation error:", orderError);
           throw new Error(
             `Payment successful but order creation failed: ${orderError.message}`
           );
         }
-      } else {
-        throw new Error(`Unexpected payment status: ${paymentIntent.status}`);
       }
     } catch (error) {
-      console.error("Payment/Order error:", error);
+      console.error("Payment processing error:", error);
       setError(error.message || "Payment processing failed");
     } finally {
       setIsProcessing(false);
@@ -311,31 +229,29 @@ function CheckoutForm({ orderDetails, clientSecret }) {
 
       <div className="payment-header">
         <h1>Secure Payment</h1>
+
         <div className="order-summary">
           <h2>Order Summary</h2>
           <div className="items-list">
-            {cart.map((item) => {
-              const { price } = validateCartItem(item);
-              return (
-                <div
-                  key={`${item.id || item._id}-${item.size || "regular"}`}
-                  className="order-item"
-                >
-                  <div className="item-info">
-                    <span className="item-name">{item.name}</span>
-                    {item.size && (
-                      <span className="item-size">{item.size}</span>
-                    )}
-                  </div>
-                  <div className="item-price">
-                    <span className="quantity">x{item.quantity}</span>
-                    <span className="price">
-                      £{(price * item.quantity).toFixed(2)}
-                    </span>
-                  </div>
+            {cart.map((item) => (
+              <div
+                key={`${item.id}-${item.size || "regular"}`}
+                className="order-item"
+              >
+                <div className="item-info">
+                  <span className="item-name">{item.name}</span>
+                  {item.size && (
+                    <span className="item-size">({item.size})</span>
+                  )}
                 </div>
-              );
-            })}
+                <div className="item-price">
+                  <span className="quantity">x{item.quantity}</span>
+                  <span className="price">
+                    £{(item.price * item.quantity).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="price-breakdown">
@@ -358,20 +274,30 @@ function CheckoutForm({ orderDetails, clientSecret }) {
           <h3>Delivery Details</h3>
           {orderDetails?.customerInfo && (
             <>
-              {Object.entries(orderDetails.customerInfo).map(
-                ([key, value]) =>
-                  key !== "email" &&
-                  key !== "specialInstructions" && (
-                    <div key={key} className="info-row">
-                      <span>
-                        {key.charAt(0).toUpperCase() +
-                          key.slice(1).replace(/([A-Z])/g, " $1")}
-                        :
-                      </span>
-                      <span>{value}</span>
-                    </div>
-                  )
-              )}
+              <div className="info-row">
+                <span>Name:</span>
+                <span>{orderDetails.customerInfo.name}</span>
+              </div>
+              <div className="info-row">
+                <span>Phone:</span>
+                <span>{orderDetails.customerInfo.phone}</span>
+              </div>
+              <div className="info-row">
+                <span>Address:</span>
+                <span>{orderDetails.customerInfo.address}</span>
+              </div>
+              <div className="info-row">
+                <span>City:</span>
+                <span>{orderDetails.customerInfo.city}</span>
+              </div>
+              <div className="info-row">
+                <span>Postcode:</span>
+                <span>{orderDetails.customerInfo.postcode}</span>
+              </div>
+              <div className="info-row">
+                <span>Delivery Time:</span>
+                <span>{orderDetails.customerInfo.deliveryTime}</span>
+              </div>
               {orderDetails.customerInfo.specialInstructions && (
                 <div className="special-instructions">
                   <h4>Special Instructions:</h4>
@@ -436,20 +362,16 @@ function PaymentPage() {
   useEffect(() => {
     const initializePayment = async () => {
       try {
-        setLoading(true);
+        if (!orderDetails?.customerInfo) {
+          throw new Error("Please complete your delivery information");
+        }
 
         if (!cart?.length) {
           throw new Error("Your cart is empty");
         }
 
-        if (!orderDetails?.customerInfo) {
-          throw new Error("Please complete your delivery information");
-        }
-
         validateCustomerInfo(orderDetails.customerInfo);
-
         const { amountInCents } = validateCartAndCalculateTotals(cart);
-        console.log("Creating payment intent with amount:", amountInCents);
 
         const response = await paymentAPI.createPaymentIntent({
           amount: amountInCents,
@@ -462,17 +384,16 @@ function PaymentPage() {
         });
 
         if (!response.clientSecret) {
-          throw new Error(
-            "No client secret received from payment intent creation"
-          );
+          throw new Error("Failed to initialize payment");
         }
 
-        console.log("Payment intent created successfully");
         setClientSecret(response.clientSecret);
       } catch (error) {
         console.error("Payment initialization failed:", error);
-        setError(error.message || "Failed to initialize payment");
-        navigate("/checkout");
+        setError(error.message);
+        setTimeout(() => {
+          navigate("/checkout");
+        }, 100);
       } finally {
         setLoading(false);
       }
@@ -480,6 +401,15 @@ function PaymentPage() {
 
     initializePayment();
   }, [cart, orderDetails, navigate]);
+
+  if (loading) {
+    return (
+      <div className="loading-container" role="status">
+        <div className="spinner" />
+        <p>Setting up payment...</p>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -493,18 +423,9 @@ function PaymentPage() {
     );
   }
 
-  if (loading || !clientSecret) {
-    return (
-      <div className="loading-container" role="status">
-        <div className="spinner" />
-        <p>Setting up payment...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="payment-page">
-      {!loading && clientSecret && (
+      {clientSecret && (
         <Elements
           stripe={stripePromise}
           options={{
@@ -521,7 +442,7 @@ function PaymentPage() {
         >
           <CheckoutForm
             orderDetails={orderDetails}
-            clientSecret={clientSecret} // Pass clientSecret here
+            clientSecret={clientSecret}
           />
         </Elements>
       )}
