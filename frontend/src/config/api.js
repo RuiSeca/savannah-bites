@@ -160,7 +160,8 @@ export const paymentAPI = {
         currency: data.currency || "gbp",
       });
 
-      const response = await api.post("/orders/create-payment-intent", {
+      // Update the endpoint path to include /api
+      const response = await api.post("/api/orders/create-payment-intent", {
         amount: data.amount,
         currency: data.currency || "gbp",
         metadata: {
