@@ -75,16 +75,70 @@ function CheckoutForm() {
 
   const orderDetails = location.state?.orderDetails;
 
+  // In PaymentPage component
   useEffect(() => {
-    if (!orderDetails?.customerInfo || !cart?.length) {
-      console.log("Missing requirements, redirecting to checkout");
-      navigate("/checkout");
-    }
-  }, [orderDetails, cart, navigate]);
+    const initializePayment = async () => {
+      try {
+        setLoading(true);
+
+        // Validate cart and order details before proceeding
+        if (!cart || !Array.isArray(cart) || cart.length === 0) {
+          throw new Error("Your cart is empty");
+        }
+
+        if (!orderDetails?.customerInfo) {
+          throw new Error("Please complete your delivery information");
+        }
+
+        const requiredFields = [
+          "name",
+          "email",
+          "phone",
+          "address",
+          "city",
+          "postcode",
+          "deliveryTime",
+        ];
+
+        const missingFields = requiredFields.filter(
+          (field) => !orderDetails.customerInfo[field]
+        );
+
+        if (missingFields.length > 0) {
+          throw new Error(
+            `Missing required fields: ${missingFields.join(", ")}`
+          );
+        }
+
+        const { amountInCents } = validateCartAndCalculateTotals(cart);
+        // ... rest of the payment initialization code
+      } catch (error) {
+        console.error("Payment initialization failed:", error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializePayment();
+  }, [cart, orderDetails, navigate]);
 
   const createOrder = useCallback(
     async (paymentIntent) => {
       try {
+        // Add logging to verify cart and orderDetails
+        console.log("Cart data:", cart);
+        console.log("Order details:", orderDetails);
+
+        // Validate data before proceeding
+        if (!cart || !Array.isArray(cart) || cart.length === 0) {
+          throw new Error("Cart is empty or invalid");
+        }
+
+        if (!orderDetails?.customerInfo) {
+          throw new Error("Customer information is missing");
+        }
+
         const validatedItems = cart.map((item) => ({
           id: item._id || item.id,
           name: item.name,
@@ -97,12 +151,21 @@ function CheckoutForm() {
           paymentIntentId: paymentIntent.id,
           orderDetails: {
             items: validatedItems,
-            ...orderDetails,
-            customerInfo: orderDetails.customerInfo,
+            customerInfo: {
+              name: orderDetails.customerInfo.name,
+              email: orderDetails.customerInfo.email,
+              phone: orderDetails.customerInfo.phone,
+              address: orderDetails.customerInfo.address,
+              city: orderDetails.customerInfo.city,
+              postcode: orderDetails.customerInfo.postcode,
+              deliveryTime: orderDetails.customerInfo.deliveryTime,
+              specialInstructions:
+                orderDetails.customerInfo.specialInstructions || "",
+            },
           },
         };
 
-        console.log("Creating order with data:", orderData);
+        console.log("Sending order data:", orderData);
         const response = await paymentAPI.createOrder(orderData);
         console.log("Order created successfully:", response);
         return response;

@@ -13,6 +13,13 @@ const API_CONFIG = {
 
 // Error Classes
 class APIError extends Error {
+  /*************  ✨ Codeium Command 🌟  *************/
+  /**
+   * Custom error class for API-related errors
+   * @param {String} message - Error message
+   * @param {Number} status - HTTP status code
+   * @param {Object} data - Additional error data
+   */
   constructor(message, status, data) {
     super(message);
     this.name = "APIError";
@@ -23,6 +30,7 @@ class APIError extends Error {
 }
 
 // Validation Functions
+/******  fd8b752a-3588-4b2f-82d0-c1943b393113  *******/
 const validateAmount = (amount) => {
   if (!amount || typeof amount !== "number" || isNaN(amount) || amount <= 0) {
     throw new Error(
@@ -42,22 +50,28 @@ const validateOrderData = (orderData) => {
     throw new Error("Order data is required");
   }
 
+  // Validate items
   if (
-    !orderData.items ||
-    !Array.isArray(orderData.items) ||
-    orderData.items.length === 0
+    !orderData.orderDetails?.items ||
+    !Array.isArray(orderData.orderDetails.items)
   ) {
+    errors.push("Order must contain at least one item");
+  } else if (orderData.orderDetails.items.length === 0) {
     errors.push("Order must contain at least one item");
   }
 
-  if (!orderData.customerInfo) {
+  // Validate customer info
+  const customerInfo = orderData.orderDetails?.customerInfo;
+  if (!customerInfo) {
     errors.push("Customer information is required");
   } else {
-    const { name, email, phone, address } = orderData.customerInfo;
+    const { name, email, phone, address, city, postcode } = customerInfo;
     if (!name) errors.push("Customer name is required");
     if (!email) errors.push("Customer email is required");
     if (!phone) errors.push("Customer phone is required");
     if (!address) errors.push("Delivery address is required");
+    if (!city) errors.push("City is required");
+    if (!postcode) errors.push("Postcode is required");
   }
 
   if (errors.length > 0) {

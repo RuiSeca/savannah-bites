@@ -4,6 +4,65 @@ const Order = require("../Models/Order");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const orderEmailService = require("../Services/orderEmailService");
 
+// Validation function
+const validateOrderData = (orderDetails, paymentIntent) => {
+  const errors = [];
+
+  // Validate items array
+  if (
+    !orderDetails.items ||
+    !Array.isArray(orderDetails.items) ||
+    orderDetails.items.length === 0
+  ) {
+    errors.push("Order must contain at least one item");
+  } else {
+    // Validate each item
+    orderDetails.items.forEach((item, index) => {
+      if (!item.id) errors.push(`Item ${index + 1} is missing an ID`);
+      if (!item.name) errors.push(`Item ${index + 1} is missing a name`);
+      if (!item.quantity || item.quantity <= 0)
+        errors.push(`Item ${index + 1} has invalid quantity`);
+      if (!item.price && !item.selectedPrice)
+        errors.push(`Item ${index + 1} is missing a price`);
+    });
+  }
+
+  // Validate customer information
+  if (!orderDetails.customerInfo) {
+    errors.push("Customer information is required");
+  } else {
+    const { name, email, phone, address, city, postcode, deliveryTime } =
+      orderDetails.customerInfo;
+    if (!name) errors.push("Customer name is required");
+    if (!email) errors.push("Customer email is required");
+    if (!phone) errors.push("Customer phone is required");
+    if (!address) errors.push("Delivery address is required");
+    if (!city) errors.push("City is required");
+    if (!postcode) errors.push("Postcode is required");
+    if (!deliveryTime) errors.push("Delivery time is required");
+  }
+
+  // Validate payment amount
+  if (orderDetails.items && Array.isArray(orderDetails.items)) {
+    const orderTotal = orderDetails.items.reduce((sum, item) => {
+      return (
+        sum + Number(item.selectedPrice || item.price) * Number(item.quantity)
+      );
+    }, 0);
+    const deliveryFee = 2.5;
+    const expectedTotal = Math.round((orderTotal + deliveryFee) * 100); // Convert to cents
+
+    if (Math.abs(expectedTotal - paymentIntent.amount) > 1) {
+      // Allow 1 cent difference for rounding
+      errors.push(
+        `Order total (${expectedTotal}) does not match payment amount (${paymentIntent.amount})`
+      );
+    }
+  }
+
+  return errors;
+};
+
 // Helper function to validate and parse delivery time
 const parseDeliveryTime = (timeString) => {
   try {
