@@ -87,8 +87,9 @@ const parseDeliveryTime = (timeString) => {
 router.post("/create-payment-intent", async (req, res) => {
   try {
     console.log("Received payment intent request:", req.body);
-    const { amount } = req.body;
+    const { amount, currency = "gbp" } = req.body;
 
+    // Validate amount
     if (!amount || !Number.isInteger(amount) || amount <= 0) {
       return res.status(400).json({
         status: "error",
@@ -96,17 +97,32 @@ router.post("/create-payment-intent", async (req, res) => {
       });
     }
 
+    // Create the payment intent with additional metadata
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount,
-      currency: "gbp",
+      amount,
+      currency,
       automatic_payment_methods: {
         enabled: true,
       },
+      metadata: {
+        integration_check: "accept_a_payment",
+      },
+      capture_method: "automatic",
+      confirm: false,
+      setup_future_usage: undefined,
+    });
+
+    // Log the created payment intent
+    console.log("Created payment intent:", {
+      id: paymentIntent.id,
+      amount: paymentIntent.amount,
+      status: paymentIntent.status,
     });
 
     res.json({
       status: "success",
       clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
     console.error("Payment intent creation failed:", error);
