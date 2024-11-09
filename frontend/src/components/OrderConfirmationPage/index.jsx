@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useStripe } from "@stripe/react-stripe-js";
 import axios from "axios";
+import { useCart } from "../../context/CartContext";
 import ProgressSteps from "../ProgressSteps";
-import AnimatedCookingLoader from "../AnimatedCookingLoader"; // Keep imports at the top
+import AnimatedCookingLoader from "../AnimatedCookingLoader";
 import "./styles.css";
 
 // API configuration
@@ -22,18 +24,20 @@ const api = axios.create({
 const OrderConfirmationPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const stripe = useStripe();
+  const { clearCart } = useCart();
   const [orderDetails, setOrderDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState(null);
 
   const orderId = location.state?.orderId || sessionStorage.getItem("orderId");
   const paymentIntentId =
     location.state?.paymentIntentId ||
     sessionStorage.getItem("paymentIntentId");
 
-  // Scroll to top when component mounts
   useEffect(() => {
-    window.scrollTo(0, 0); // This will scroll to top after the component mounts
+    window.scrollTo(0, 0);
   }, []);
 
   useEffect(() => {
@@ -41,23 +45,68 @@ const OrderConfirmationPage = () => {
       sessionStorage.removeItem("paymentSuccess");
       sessionStorage.removeItem("orderId");
       sessionStorage.removeItem("paymentIntentId");
+      sessionStorage.removeItem("orderDetails");
+    };
+
+    const handlePaymentConfirmation = async () => {
+      try {
+        // Check if we're returning from Stripe
+        const clientSecret = new URLSearchParams(window.location.search).get(
+          "payment_intent_client_secret"
+        );
+
+        if (clientSecret && stripe) {
+          const { paymentIntent } =
+            await stripe.retrievePaymentIntent(clientSecret);
+          setPaymentStatus(paymentIntent.status);
+
+          if (paymentIntent.status === "succeeded") {
+            // Create order if we have stored order details
+            const storedOrderDetails = sessionStorage.getItem("orderDetails");
+            if (storedOrderDetails) {
+              const orderData = JSON.parse(storedOrderDetails);
+              orderData.paymentDetails = {
+                paymentIntentId: paymentIntent.id,
+                status: paymentIntent.status,
+                method: "card",
+              };
+
+              const response = await api.post("/orders", orderData);
+              if (response.data?.orderId) {
+                sessionStorage.setItem("orderId", response.data.orderId);
+                sessionStorage.setItem("paymentIntentId", paymentIntent.id);
+                clearCart();
+                window.location.replace(
+                  `/confirmation?order=${response.data.orderId}`
+                );
+              }
+            }
+          } else {
+            throw new Error(
+              `Payment was not successful: ${paymentIntent.status}`
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Payment confirmation error:", error);
+        setError(error.message || "Payment confirmation failed");
+        setTimeout(() => navigate("/checkout"), 3000);
+      }
     };
 
     const fetchOrderDetails = async () => {
       try {
         if (!orderId) {
-          console.log("No order ID provided, redirecting to home");
-          cleanupSessionStorage();
-          navigate("/");
-          return;
+          return await handlePaymentConfirmation();
         }
 
         console.log("Fetching order details for ID:", orderId);
         const response = await api.get(`/orders/${orderId}`);
-        if (!response.data || !response.data.order) {
+        if (!response.data?.order) {
           throw new Error("Invalid response format from server");
         }
         setOrderDetails(response.data.order);
+        setPaymentStatus("succeeded");
         cleanupSessionStorage();
       } catch (error) {
         console.error("Error fetching order details:", error);
@@ -69,14 +118,13 @@ const OrderConfirmationPage = () => {
       } finally {
         setTimeout(() => {
           setLoading(false);
-        }, 5000);
+        }, 2000);
       }
     };
 
     fetchOrderDetails();
-
     return cleanupSessionStorage;
-  }, [orderId, navigate]);
+  }, [orderId, navigate, stripe, clearCart]);
 
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
@@ -95,6 +143,11 @@ const OrderConfirmationPage = () => {
     return (
       <div className="loading-container" role="status">
         <AnimatedCookingLoader />
+        <p className="loading-text">
+          {paymentStatus === "processing"
+            ? "Processing your payment..."
+            : "Loading your order details..."}
+        </p>
       </div>
     );
   }
@@ -102,10 +155,10 @@ const OrderConfirmationPage = () => {
   if (error) {
     return (
       <div className="error-container" role="alert">
-        <h2>Error Loading Order</h2>
+        <h2>Error {paymentStatus ? "Processing Payment" : "Loading Order"}</h2>
         <p className="error-message">{error}</p>
-        <button onClick={() => navigate("/")} className="return-button">
-          Return to Home
+        <button onClick={() => navigate("/checkout")} className="return-button">
+          Return to Checkout
         </button>
       </div>
     );

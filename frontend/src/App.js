@@ -8,7 +8,7 @@ import {
 import { CartProvider } from "./context/CartContext";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import ScrollToTop from "./components/ScrollToTop";
+import ScrollToTop from "./components/ScrollToTopButton";
 
 import "./App.css";
 
@@ -60,8 +60,6 @@ function AppContent() {
         </Suspense>
       )}
 
-      <ScrollToTop />
-
       <main className="main-content">
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
@@ -111,6 +109,15 @@ function AppContent() {
         </Suspense>
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>{/* Your app routes here */}</Routes>
+      <ScrollToTopButton />
+    </Router>
   );
 }
 
