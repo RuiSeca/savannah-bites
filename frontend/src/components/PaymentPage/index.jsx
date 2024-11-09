@@ -10,7 +10,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import ProgressSteps from "../ProgressSteps";
 import { paymentAPI } from "../../config/api";
-import Spinner from "../Spinner";
 import ErrorBoundary from "../ErrorBoundary";
 import "./PaymentPage.css";
 
@@ -311,7 +310,6 @@ function CheckoutForm({ orderDetails }) {
           <div className="button-content">
             {isProcessing ? (
               <>
-                <Spinner size="small" />
                 <span>Processing...</span>
               </>
             ) : (
@@ -384,7 +382,6 @@ function PaymentPage() {
   if (!clientSecret) {
     return (
       <div className="loading-container" role="status">
-        <Spinner />
         <p>Setting up payment...</p>
       </div>
     );
