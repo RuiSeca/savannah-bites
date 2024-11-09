@@ -225,7 +225,6 @@ function CheckoutForm({ orderDetails, clientSecret }) {
       setIsProcessing(true);
       setError(null);
 
-      // Validate cart before proceeding
       const totals = validateCartAndCalculateTotals(cart);
       console.log("Processing payment for amount:", totals.amountInCents);
 
@@ -239,7 +238,7 @@ function CheckoutForm({ orderDetails, clientSecret }) {
       const { error: paymentError, paymentIntent } =
         await stripe.confirmPayment({
           elements,
-          clientSecret, // Add this line
+          redirect: "if_required",
           confirmParams: {
             return_url: `${window.location.origin}/confirmation`,
             payment_method_data: {
@@ -259,32 +258,66 @@ function CheckoutForm({ orderDetails, clientSecret }) {
         });
 
       if (paymentError) {
-        console.error("Payment confirmation error:", paymentError);
-        throw new Error(paymentError.message || "Payment failed");
+        throw new Error(paymentError.message);
       }
 
-      if (paymentIntent && paymentIntent.status === "succeeded") {
-        try {
-          const { orderId } = await createOrder(paymentIntent);
-          clearCart();
-          navigate("/confirmation", {
-            state: {
-              orderId,
-              status: "success",
-              paymentIntentId: paymentIntent.id,
-            },
-            replace: true,
-          });
-        } catch (orderError) {
-          console.error("Order creation error:", orderError);
-          throw new Error(
-            `Payment successful but order creation failed: ${orderError.message}`
-          );
-        }
+      if (paymentIntent.status === "succeeded") {
+        // Create order after successful payment
+        const orderData = {
+          customer: {
+            name: orderDetails.customerInfo.name,
+            email: orderDetails.customerInfo.email.toLowerCase().trim(),
+            phone: orderDetails.customerInfo.phone,
+          },
+          orderDetails: cart.map((item) => ({
+            item: item._id || item.id,
+            name: item.name,
+            quantity: parseInt(item.quantity, 10),
+            price: Number(item.selectedPrice || item.price),
+            size: item.size || "regular",
+          })),
+          address: {
+            street: orderDetails.customerInfo.address.trim(),
+            city: orderDetails.customerInfo.city.trim(),
+            postcode: orderDetails.customerInfo.postcode.trim().toUpperCase(),
+          },
+          amount: {
+            subtotal: totals.subtotal,
+            deliveryFee: totals.deliveryFee,
+            total: totals.total,
+            discount: 0,
+          },
+          paymentDetails: {
+            paymentIntentId: paymentIntent.id,
+            method: "card",
+            status: paymentIntent.status,
+          },
+          deliveryTime: {
+            requested: parseDeliveryDateTime(
+              orderDetails.customerInfo.deliveryTime
+            ),
+          },
+          specialInstructions:
+            orderDetails.customerInfo.specialInstructions || "",
+        };
+
+        const response = await paymentAPI.createOrder(orderData);
+        clearCart();
+
+        // Store order information in sessionStorage as backup
+        sessionStorage.setItem("orderId", response.orderId);
+        sessionStorage.setItem("paymentIntentId", paymentIntent.id);
+
+        // Navigate to confirmation page
+        navigate("/confirmation", {
+          state: {
+            orderId: response.orderId,
+            paymentIntentId: paymentIntent.id,
+          },
+          replace: true,
+        });
       } else {
-        throw new Error(
-          `Unexpected payment status: ${paymentIntent?.status || "unknown"}`
-        );
+        throw new Error(`Unexpected payment status: ${paymentIntent.status}`);
       }
     } catch (error) {
       console.error("Payment/Order error:", error);
