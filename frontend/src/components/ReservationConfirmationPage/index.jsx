@@ -1,278 +1,388 @@
-import React, { useEffect, useState, useLayoutEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useLocation, useNavigate } from "react-router-dom";
-import ProgressStepsReservation from "../ProgressStepsReservation/index.jsx";
-import "./styles.css";
+import { format } from "date-fns";
+import ProgressStepsReservation from "../ProgressStepsReservation";
+import "./ReservationPage.css";
 
-// API configuration
-const apiUrl =
-  process.env.NODE_ENV === "development"
-    ? process.env.REACT_APP_NGROK_URL || process.env.REACT_APP_API_BASE_URL
-    : process.env.REACT_APP_API_BASE_URL;
-
-// Create axios instance with proper URL construction
-const api = axios.create({
-  baseURL: apiUrl.endsWith("/api") ? apiUrl : `${apiUrl}/api`,
-  withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
+// Constants
+const API_CONFIG = {
+  baseURL:
+    process.env.NODE_ENV === "development"
+      ? process.env.REACT_APP_NGROK_URL || process.env.REACT_APP_API_BASE_URL
+      : process.env.REACT_APP_API_BASE_URL,
+  endpoints: {
+    reservations: "/api/reservations",
+    availability: "/api/reservations/availability",
   },
-});
-
-// ScrollToTop component
-const ScrollToTop = () => {
-  const { pathname } = useLocation();
-
-  useLayoutEffect(() => {
-    document.documentElement.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "instant", // Use instant instead of smooth for immediate effect
-    });
-  }, [pathname]);
-
-  return null;
 };
 
-const ReservationConfirmationPage = () => {
-  const location = useLocation();
+const TIME_SLOTS = [
+  { label: "11:00 AM", value: "11:00" },
+  { label: "1:00 PM", value: "13:00" },
+  { label: "3:00 PM", value: "15:00" },
+  { label: "5:00 PM", value: "17:00" },
+  { label: "7:00 PM", value: "19:00" },
+  { label: "9:00 PM", value: "21:00" },
+];
+
+const INITIAL_FORM_STATE = {
+  guests: "",
+  name: "",
+  email: "",
+  phone: "",
+  allergies: "",
+};
+
+const GUEST_OPTIONS = [
+  { value: "1", label: "1 person" },
+  { value: "2", label: "2 people" },
+  { value: "3", label: "3 people" },
+  { value: "4", label: "4 people" },
+  { value: "5", label: "5 people" },
+  { value: "6", label: "6 people" },
+  { value: "7+", label: "7 or more (we'll contact you)" },
+];
+
+// API instance
+const api = axios.create({
+  baseURL: API_CONFIG.baseURL.endsWith("/api")
+    ? API_CONFIG.baseURL
+    : `${API_CONFIG.baseURL}/api`,
+  withCredentials: true,
+  headers: { "Content-Type": "application/json" },
+});
+
+const ReservationPage = () => {
   const navigate = useNavigate();
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  // Get reservation details from navigation state
-  const { reservationId, reservation: passedReservation } =
-    location.state || {};
+  // State management with proper types
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedTime, setSelectedTime] = useState("");
+  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+  const [availableTables, setAvailableTables] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const [reservationDetails, setReservationDetails] = useState(
-    passedReservation || null
-  );
-  const [loading, setLoading] = useState(!passedReservation);
-  const [error, setError] = useState(null);
+  // Fetch available tables with proper error handling
+  const fetchAvailableTables = useCallback(async (date) => {
+    const controller = new AbortController();
 
-  // Force scroll to top on component mount
-  useLayoutEffect(() => {
-    document.documentElement.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "instant",
-    });
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await api.get(
+        `${API_CONFIG.endpoints.availability}/${date}`,
+        {
+          signal: controller.signal,
+        }
+      );
+
+      if (response.data.status === "success" && response.data.availability) {
+        setAvailableTables(response.data.availability);
+      } else {
+        // Default availability if no data
+        const defaultAvailability = TIME_SLOTS.reduce((acc, slot) => {
+          acc[slot.value] = 10;
+          return acc;
+        }, {});
+        setAvailableTables(defaultAvailability);
+      }
+    } catch (err) {
+      if (!axios.isCancel(err)) {
+        console.error("Error fetching availability:", err);
+        setError("Failed to fetch availability. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    // If no reservation data or ID, redirect to home
-    if (!reservationId && !passedReservation) {
-      console.log("No reservation details available, redirecting to home");
-      navigate("/");
-      return;
+    if (selectedDate) {
+      const timeoutId = setTimeout(
+        () => fetchAvailableTables(selectedDate),
+        300
+      );
+      return () => clearTimeout(timeoutId);
     }
+  }, [selectedDate, fetchAvailableTables]);
 
-    // If we have reservation details from the form submission, skip API call
-    if (passedReservation) {
-      setLoading(false);
-      return;
-    }
+  // Form validation
+  const validateForm = useCallback(() => {
+    if (!selectedDate) return "Please select a date";
+    if (!selectedTime) return "Please select a time slot";
+    if (!formData.guests) return "Please select number of guests";
+    if (!formData.name.trim()) return "Please enter your name";
+    if (!formData.email.trim()) return "Please enter your email";
+    if (!formData.phone.trim()) return "Please enter your phone number";
 
-    const fetchReservationDetails = async () => {
-      try {
-        console.log("Fetching reservation details for ID:", reservationId);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim()))
+      return "Please enter a valid email address";
 
-        const response = await api.get(`/reservations/${reservationId}`);
-        console.log("Reservation details response:", response.data);
+    const phoneRegex = /^[\d\s-+()]{10,}$/;
+    if (!phoneRegex.test(formData.phone.replace(/\s+/g, "")))
+      return "Please enter a valid phone number";
 
-        if (response.data.status === "success" && response.data.data) {
-          setReservationDetails(response.data.data);
-        } else {
-          throw new Error("Invalid response format from server");
-        }
-      } catch (error) {
-        console.error("Error fetching reservation details:", error);
-        setError(
-          error.response?.data?.message || "Failed to load reservation details"
-        );
-      } finally {
-        setLoading(false);
+    return null;
+  }, [selectedDate, selectedTime, formData]);
+
+  // Event handlers
+  const handleInputChange = useCallback((e) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+    setError("");
+  }, []);
+
+  const handleTimeSlotClick = useCallback(
+    (time) => {
+      if (availableTables[time] > 0) {
+        setSelectedTime(time);
+        setError("");
       }
-    };
+    },
+    [availableTables]
+  );
 
-    fetchReservationDetails();
-  }, [reservationId, navigate, passedReservation]);
+  const handleDateChange = useCallback((e) => {
+    const newDate = new Date(e.target.value);
+    const today = new Date();
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "Not specified";
+    today.setHours(0, 0, 0, 0);
+    newDate.setHours(0, 0, 0, 0);
+
+    if (newDate >= today) {
+      setSelectedDate(e.target.value);
+      setSelectedTime("");
+    } else {
+      alert("Please select a future date");
+    }
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const validationError = validateForm();
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat("en-GB", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }).format(date);
-    } catch (error) {
-      console.error("Date formatting error:", error);
-      return dateString;
+      setSubmitting(true);
+      setError("");
+
+      const reservationData = {
+        ...formData,
+        date: selectedDate,
+        time: selectedTime,
+      };
+
+      const response = await api.post(
+        API_CONFIG.endpoints.reservations,
+        reservationData
+      );
+
+      if (response.data.status === "success" && response.data.data) {
+        navigate("/reservation-confirmation", {
+          state: {
+            reservationId: response.data.data.reservationId,
+            reservation: {
+              ...reservationData,
+              id: response.data.data.reservationId,
+              status: response.data.data.status,
+            },
+          },
+        });
+      } else {
+        throw new Error(
+          response.data.message || "Failed to create reservation"
+        );
+      }
+    } catch (err) {
+      console.error("Submission error:", err);
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.errors?.join(", ") ||
+          "Failed to submit reservation. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <>
-        <ScrollToTop />
-        <div className="loading-container" role="status">
-          <div className="spinner"></div>
-          <p>Loading your reservation details...</p>
-        </div>
-      </>
-    );
-  }
-
-  if (error) {
-    return (
-      <>
-        <ScrollToTop />
-        <div className="error-container" role="alert">
-          <h2>Error Loading Reservation</h2>
-          <p className="error-message">{error}</p>
-          <button onClick={() => navigate("/")} className="return-button">
-            Return to Home
+  // Render functions
+  const renderTimeSlots = useCallback(
+    () => (
+      <div className="time-slots-grid">
+        {TIME_SLOTS.map(({ label, value }) => (
+          <button
+            key={value}
+            type="button"
+            className={`time-slot ${selectedTime === value ? "selected" : ""} 
+                     ${availableTables[value] === 0 ? "full" : ""}`}
+            onClick={() => handleTimeSlotClick(value)}
+            disabled={availableTables[value] === 0}
+          >
+            <span className="time">{label}</span>
+            <span className="tables-left">
+              {availableTables[value] || 0} tables available
+            </span>
           </button>
-        </div>
-      </>
-    );
-  }
-
-  if (!reservationDetails) {
-    return (
-      <>
-        <ScrollToTop />
-        <div className="error-container" role="alert">
-          <h2>Reservation Not Found</h2>
-          <p>We couldn't find the reservation details you're looking for.</p>
-          <button onClick={() => navigate("/")} className="return-button">
-            Return to Home
-          </button>
-        </div>
-      </>
-    );
-  }
+        ))}
+      </div>
+    ),
+    [selectedTime, availableTables, handleTimeSlotClick]
+  );
 
   return (
-    <>
-      <ScrollToTop />
-      <div className="confirmation-container">
-        <ProgressStepsReservation currentStep={2} />
+    <div className="reservation-page">
+      <header className="reservation-header">
+        <h1>Make a Reservation</h1>
+        <p>Book Your Table at Savannah Bites</p>
+      </header>
 
-        <div className="confirmation-header">
-          <h1>Reservation Confirmation</h1>
-          <div className="status-badge" data-status="confirmed">
-            <div className="success-icon">✓</div>
-            <p className="confirmation-message">
-              Your table has been reserved! A confirmation email has been sent
-              to:
-            </p>
-            <p className="customer-email">{reservationDetails.email}</p>
+      <main className="reservation-content">
+        <ProgressStepsReservation currentStep={1} />
 
-            <div className="reservation-info">
-              <p className="confirmation-id">
-                Reservation ID: {reservationDetails.id || reservationId}
-              </p>
-              <p className="reservation-status">
-                Status: {reservationDetails.status || "Confirmed"}
-              </p>
-            </div>
+        {error && (
+          <div className="error-message" role="alert">
+            {error}
           </div>
-        </div>
+        )}
 
-        <div className="confirmation-content">
-          <div className="customer-info section">
+        <form onSubmit={handleSubmit} className="reservation-form" noValidate>
+          <section className="form-section">
+            <h2>Choose Your Date & Time</h2>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="date">Select Date</label>
+                <input
+                  type="date"
+                  id="date"
+                  required
+                  min={today}
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  className="date-input"
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label>Available Time Slots</label>
+                {loading ? (
+                  <div className="loading-indicator">
+                    Loading available times...
+                  </div>
+                ) : (
+                  renderTimeSlots()
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="form-section">
             <h2>Guest Information</h2>
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="label">Name:</span>
-                <span className="value">{reservationDetails.name}</span>
-              </div>
-              <div className="info-item">
-                <span className="label">Phone:</span>
-                <span className="value">{reservationDetails.phone}</span>
-              </div>
-              <div className="info-item">
-                <span className="label">Email:</span>
-                <span className="value">{reservationDetails.email}</span>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="guests">Number of Guests</label>
+                <select
+                  id="guests"
+                  required
+                  value={formData.guests}
+                  onChange={handleInputChange}
+                  className="select-input"
+                >
+                  <option value="">Select guests</option>
+                  {GUEST_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-          </div>
 
-          <div className="reservation-details section">
-            <h2>Reservation Details</h2>
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="label">Date:</span>
-                <span className="value">
-                  {formatDate(reservationDetails.date)}
-                </span>
+            <div className="form-row two-columns">
+              <div className="form-group">
+                <label htmlFor="name">Full Name</label>
+                <input
+                  type="text"
+                  id="name"
+                  required
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Enter your full name"
+                  className="text-input"
+                />
               </div>
-              <div className="info-item">
-                <span className="label">Time:</span>
-                <span className="value">{reservationDetails.time}</span>
-              </div>
-              <div className="info-item">
-                <span className="label">Number of Guests:</span>
-                <span className="value">
-                  {reservationDetails.guests}{" "}
-                  {reservationDetails.guests === 1 ? "person" : "people"}
-                </span>
-              </div>
-              {reservationDetails.allergies && (
-                <div className="allergies-info">
-                  <span className="label">Dietary Requirements:</span>
-                  <p className="value">{reservationDetails.allergies}</p>
-                </div>
-              )}
-            </div>
-          </div>
 
-          <div className="next-steps section">
-            <h2>What's Next?</h2>
-            <div className="steps-list">
-              <div className="step">
-                <span className="step-number">1</span>
-                <p>You'll receive an email confirmation shortly</p>
-              </div>
-              <div className="step">
-                <span className="step-number">2</span>
-                <p>Please arrive 5-10 minutes before your reservation time</p>
-              </div>
-              <div className="step">
-                <span className="step-number">3</span>
-                <p>
-                  If you need to modify your reservation, please call us
-                  directly
-                </p>
+              <div className="form-group">
+                <label htmlFor="phone">Phone Number</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  required
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="Enter your phone number"
+                  className="text-input"
+                />
               </div>
             </div>
-          </div>
 
-          <div className="important-info section">
-            <h2>Important Information</h2>
-            <ul>
-              <li>Please let us know if you're running late</li>
-              <li>
-                We hold reservations for up to 15 minutes after the booking time
-              </li>
-              <li>For parties of 7 or more, please contact us directly</li>
-            </ul>
-          </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="email">Email Address</label>
+                <input
+                  type="email"
+                  id="email"
+                  required
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="Enter your email address"
+                  className="text-input"
+                />
+              </div>
+            </div>
 
-          <div className="actions section">
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="allergies">Food Allergies</label>
+                <textarea
+                  id="allergies"
+                  value={formData.allergies}
+                  onChange={handleInputChange}
+                  placeholder="List any allergies (optional)"
+                  className="textarea-input"
+                />
+              </div>
+            </div>
+          </section>
+
+          <div className="form-actions">
             <button
-              onClick={() => navigate("/")}
-              className="return-home-button"
+              type="submit"
+              className={`submit-button ${submitting ? "submitting" : ""}`}
+              disabled={submitting || loading}
             >
-              Return to Home
+              {submitting ? "Processing..." : "Confirm Reservation"}
             </button>
           </div>
-        </div>
-      </div>
-    </>
+        </form>
+      </main>
+    </div>
   );
 };
 
-export default ReservationConfirmationPage;
+export default ReservationPage;
