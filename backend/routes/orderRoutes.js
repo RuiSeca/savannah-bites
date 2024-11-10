@@ -4,50 +4,57 @@ const Order = require("../Models/Order");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const orderEmailService = require("../Services/orderEmailService");
 
-// Validation function
-const validateOrderData = (orderDetails, paymentIntent) => {
+// Updated validation function in orderRoutes.js
+const validateOrderData = (orderData, paymentIntent) => {
   const errors = [];
 
-  // Validate items array
+  // Validate orderDetails array
   if (
-    !orderDetails.items ||
-    !Array.isArray(orderDetails.items) ||
-    orderDetails.items.length === 0
+    !orderData.orderDetails ||
+    !Array.isArray(orderData.orderDetails) ||
+    orderData.orderDetails.length === 0
   ) {
     errors.push("Order must contain at least one item");
   } else {
     // Validate each item
-    orderDetails.items.forEach((item, index) => {
-      if (!item.id) errors.push(`Item ${index + 1} is missing an ID`);
+    orderData.orderDetails.forEach((item, index) => {
+      if (!item.item) errors.push(`Item ${index + 1} is missing an ID`);
       if (!item.name) errors.push(`Item ${index + 1} is missing a name`);
       if (!item.quantity || item.quantity <= 0)
         errors.push(`Item ${index + 1} has invalid quantity`);
-      if (!item.price && !item.selectedPrice)
-        errors.push(`Item ${index + 1} is missing a price`);
+      if (!item.price) errors.push(`Item ${index + 1} is missing a price`);
     });
   }
 
   // Validate customer information
-  if (!orderDetails.customerInfo) {
+  if (!orderData.customer) {
     errors.push("Customer information is required");
   } else {
-    const { name, email, phone, address, city, postcode, deliveryTime } =
-      orderDetails.customerInfo;
+    const { name, email, phone } = orderData.customer;
     if (!name) errors.push("Customer name is required");
     if (!email) errors.push("Customer email is required");
     if (!phone) errors.push("Customer phone is required");
-    if (!address) errors.push("Delivery address is required");
+  }
+
+  // Validate address
+  if (!orderData.address) {
+    errors.push("Address information is required");
+  } else {
+    const { street, city, postcode } = orderData.address;
+    if (!street) errors.push("Street address is required");
     if (!city) errors.push("City is required");
     if (!postcode) errors.push("Postcode is required");
-    if (!deliveryTime) errors.push("Delivery time is required");
+  }
+
+  // Validate delivery time
+  if (!orderData.deliveryTime?.requested) {
+    errors.push("Delivery time is required");
   }
 
   // Validate payment amount
-  if (orderDetails.items && Array.isArray(orderDetails.items)) {
-    const orderTotal = orderDetails.items.reduce((sum, item) => {
-      return (
-        sum + Number(item.selectedPrice || item.price) * Number(item.quantity)
-      );
+  if (orderData.orderDetails && Array.isArray(orderData.orderDetails)) {
+    const orderTotal = orderData.orderDetails.reduce((sum, item) => {
+      return sum + Number(item.price) * Number(item.quantity);
     }, 0);
     const deliveryFee = 2.5;
     const expectedTotal = Math.round((orderTotal + deliveryFee) * 100); // Convert to cents
@@ -135,18 +142,20 @@ router.post("/create-payment-intent", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     console.log("Received order creation request:", req.body);
-    const { paymentIntentId, orderDetails } = req.body;
+    const orderData = req.body;
 
     // Initial validation
-    if (!orderDetails || !paymentIntentId) {
+    if (!orderData || !orderData.paymentIntentId) {
       return res.status(400).json({
         status: "error",
-        error: "Missing required order details or payment intent ID",
+        error: "Missing required order data or payment intent ID",
       });
     }
 
     // Verify payment with Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const paymentIntent = await stripe.paymentIntents.retrieve(
+      orderData.paymentIntentId
+    );
     console.log(
       "Retrieved payment intent:",
       paymentIntent.id,
@@ -162,7 +171,7 @@ router.post("/", async (req, res) => {
     }
 
     // Validate order data
-    const validationErrors = validateOrderData(orderDetails, paymentIntent);
+    const validationErrors = validateOrderData(orderData, paymentIntent);
     if (validationErrors.length > 0) {
       return res.status(400).json({
         status: "error",
@@ -171,60 +180,16 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Convert amounts
-    const amountInPounds = paymentIntent.amount / 100;
-    const deliveryFee = 2.5;
-    const subtotalInPounds = Number((amountInPounds - deliveryFee).toFixed(2));
-
-    // Parse delivery time
-    const deliveryTime = parseDeliveryTime(
-      orderDetails.customerInfo.deliveryTime
-    );
-
     // Create order object
     const newOrder = new Order({
-      customer: {
-        name: orderDetails.customerInfo.name,
-        email: orderDetails.customerInfo.email.toLowerCase().trim(),
-        phone: orderDetails.customerInfo.phone,
-      },
-      orderDetails: orderDetails.items.map((item) => ({
-        item: item.id,
-        name: item.name,
-        quantity: parseInt(item.quantity, 10),
-        price: Number(item.selectedPrice || item.price),
-        size: item.size || "regular",
-      })),
-      amount: {
-        subtotal: subtotalInPounds,
-        deliveryFee,
-        total: amountInPounds,
-        discount: orderDetails.discount || 0,
-      },
-      paymentDetails: {
-        paymentIntentId,
-        method: "card",
-        status: "succeeded",
-      },
-      address: {
-        street: orderDetails.customerInfo.address.trim(),
-        city: orderDetails.customerInfo.city.trim(),
-        postcode: orderDetails.customerInfo.postcode.trim().toUpperCase(),
-      },
-      deliveryTime: {
-        requested: deliveryTime,
-      },
-      specialInstructions: orderDetails.customerInfo.specialInstructions,
-      orderStatus: {
-        current: "pending",
-        history: [
-          {
-            status: "pending",
-            timestamp: new Date(),
-            note: "Order placed",
-          },
-        ],
-      },
+      customer: orderData.customer,
+      orderDetails: orderData.orderDetails,
+      address: orderData.address,
+      amount: orderData.amount,
+      paymentDetails: orderData.paymentDetails,
+      deliveryTime: orderData.deliveryTime,
+      specialInstructions: orderData.specialInstructions,
+      orderStatus: orderData.orderStatus,
     });
 
     // Validate against schema
@@ -234,7 +199,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({
         status: "error",
         error: "Validation failed",
-        details: validationError.errors,
+        details: Object.values(validationError.errors).map((e) => e.message),
       });
     }
 
@@ -245,13 +210,12 @@ router.post("/", async (req, res) => {
     // Send confirmation email
     try {
       await orderEmailService.sendOrderConfirmation(
-        orderDetails.customerInfo.email,
+        orderData.customer.email,
         savedOrder
       );
       console.log("Order confirmation email sent");
     } catch (emailError) {
       console.error("Failed to send confirmation email:", emailError);
-      // Log but don't fail the order
     }
 
     // Send success response
@@ -266,6 +230,9 @@ router.post("/", async (req, res) => {
       status: "error",
       error: "Failed to create order",
       message: error.message,
+      details: error.errors
+        ? Object.values(error.errors).map((e) => e.message)
+        : undefined,
     });
   }
 });

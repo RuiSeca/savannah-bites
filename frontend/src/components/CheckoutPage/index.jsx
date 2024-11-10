@@ -243,7 +243,7 @@ function CheckoutPage() {
         const amountInCents = Math.round(totalAmount * 100);
 
         // Find the delivery slot display value
-        const selectedSlot = DELIVERY_SLOTS.find(
+        const selectedTimeSlot = DELIVERY_SLOTS.find(
           (slot) => slot.value === formData.deliveryTime
         );
 
@@ -251,7 +251,7 @@ function CheckoutPage() {
           state: {
             orderDetails: {
               items: cart.map((item) => ({
-                id: item.id,
+                id: item.id || item._id,
                 name: item.name,
                 quantity: parseInt(item.quantity, 10),
                 price: Number(item.selectedPrice || item.price),
@@ -264,14 +264,13 @@ function CheckoutPage() {
                 address: formData.street.trim(),
                 city: formData.city.trim(),
                 postcode: formData.postcode.toUpperCase().trim(),
-                deliveryTime: formData.deliveryTime, // This will now be in 24-hour format
+                deliveryTime: formData.deliveryTime,
+                deliveryTimeDisplay: selectedTimeSlot?.display || "", // Add display value if needed
                 specialInstructions: formData.specialInstructions.trim(),
               },
               subtotal: Number(subtotal.toFixed(2)),
               deliveryFee: DELIVERY_FEE,
               totalAmount: amountInCents,
-              orderDate: new Date().toISOString(),
-              selectedTimeSlot: selectedSlot?.display || "", // Store display value if needed
             },
           },
         });

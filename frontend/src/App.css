@@ -150,7 +150,7 @@ body {
 }
 
 /* ScrollToTop Button */
-.scroll-to-top {
+.scroll-to-top-btn {
   position: fixed;
   bottom: 30px;
   right: 30px;
@@ -172,18 +172,18 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.scroll-to-top.visible {
+.scroll-to-top-btn.visible {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
 }
 
-.scroll-to-top:hover {
+.scroll-to-top-btn:hover {
   background: var(--secondary-color);
   transform: translateY(-2px);
 }
 
-.scroll-to-top svg {
+.scroll-to-top-btn svg {
   width: 24px;
   height: 24px;
   color: white;
@@ -191,14 +191,14 @@ body {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .scroll-to-top {
+  .scroll-to-top-btn {
     bottom: 20px;
     right: 20px;
     width: 40px;
     height: 40px;
   }
 
-  .scroll-to-top svg {
+  .scroll-to-top-btn {
     width: 20px;
     height: 20px;
   }
@@ -277,14 +277,14 @@ body {
     scroll-behavior: auto !important;
   }
 
-  .scroll-to-top {
+  .scroll-to-top-btn {
     transition: opacity 0.1s ease;
   }
 }
 
 /* Print Styles */
 @media print {
-  .scroll-to-top,
+  .scroll-to-top-btn,
   .navigation {
     display: none !important;
   }

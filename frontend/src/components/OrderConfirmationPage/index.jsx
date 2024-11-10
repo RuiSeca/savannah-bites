@@ -50,7 +50,6 @@ const OrderConfirmationPage = () => {
 
     const handlePaymentConfirmation = async () => {
       try {
-        // Check if we're returning from Stripe
         const clientSecret = new URLSearchParams(window.location.search).get(
           "payment_intent_client_secret"
         );
@@ -61,7 +60,6 @@ const OrderConfirmationPage = () => {
           setPaymentStatus(paymentIntent.status);
 
           if (paymentIntent.status === "succeeded") {
-            // Create order if we have stored order details
             const storedOrderDetails = sessionStorage.getItem("orderDetails");
             if (storedOrderDetails) {
               const orderData = JSON.parse(storedOrderDetails);
@@ -102,16 +100,19 @@ const OrderConfirmationPage = () => {
 
         console.log("Fetching order details for ID:", orderId);
         const response = await api.get(`/orders/${orderId}`);
-        if (!response.data?.order) {
+
+        // Update this part to handle the new response format
+        if (response.data?.status === "success" && response.data?.data) {
+          setOrderDetails(response.data.data);
+          setPaymentStatus("succeeded");
+          cleanupSessionStorage();
+        } else {
           throw new Error("Invalid response format from server");
         }
-        setOrderDetails(response.data.order);
-        setPaymentStatus("succeeded");
-        cleanupSessionStorage();
       } catch (error) {
         console.error("Error fetching order details:", error);
         setError(
-          error.response?.data?.message ||
+          error.response?.data?.error ||
             error.message ||
             "Failed to load order details"
         );
@@ -137,6 +138,10 @@ const OrderConfirmationPage = () => {
       console.error("Date formatting error:", error);
       return dateString;
     }
+  };
+
+  const formatPrice = (price) => {
+    return typeof price === "number" ? price.toFixed(2) : "0.00";
   };
 
   if (loading) {
@@ -256,7 +261,7 @@ const OrderConfirmationPage = () => {
             {orderDetails.orderDetails?.length > 0 ? (
               orderDetails.orderDetails.map((item, index) => (
                 <div
-                  key={`${item._id || item.id}-${index}`}
+                  key={`${item._id || item.id || index}`}
                   className="order-item"
                 >
                   <div className="item-header">
@@ -268,7 +273,7 @@ const OrderConfirmationPage = () => {
                   <div className="item-details">
                     <span className="quantity">Qty: {item.quantity}</span>
                     <span className="price">
-                      £{(item.price * item.quantity).toFixed(2)}
+                      £{formatPrice(item.price * item.quantity)}
                     </span>
                   </div>
                 </div>
@@ -282,15 +287,15 @@ const OrderConfirmationPage = () => {
             <div className="price-breakdown">
               <div className="price-row">
                 <span>Subtotal:</span>
-                <span>£{orderDetails.amount?.subtotal.toFixed(2)}</span>
+                <span>£{formatPrice(orderDetails.amount?.subtotal)}</span>
               </div>
               <div className="price-row">
                 <span>Delivery Fee:</span>
-                <span>£{orderDetails.amount?.deliveryFee.toFixed(2)}</span>
+                <span>£{formatPrice(orderDetails.amount?.deliveryFee)}</span>
               </div>
               <div className="price-row total">
                 <span>Total Amount:</span>
-                <span>£{orderDetails.amount?.total.toFixed(2)}</span>
+                <span>£{formatPrice(orderDetails.amount?.total)}</span>
               </div>
             </div>
           </div>

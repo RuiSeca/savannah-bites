@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import {
   PaymentElement,
@@ -16,7 +16,7 @@ const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 const DELIVERY_FEE = 2.5;
 
-// Validation functions
+// Helper functions
 const validateCartItem = (item) => {
   if (!item) throw new Error("Invalid cart item");
 
@@ -56,41 +56,98 @@ const validateCartAndCalculateTotals = (cart) => {
     amountInCents,
   };
 };
-const validateCustomerInfo = (customerInfo) => {
-  if (!customerInfo) throw new Error("Customer information is required");
 
+// Transform order data to match API expectations
+const transformOrderData = (paymentIntentId, checkoutData) => {
+  // Create delivery time Date object from the 24-hour format time
+  const deliveryTime = new Date();
+  const [hours, minutes] = checkoutData.customerInfo.deliveryTime.split(":");
+  deliveryTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+  // If time has passed for today, set it for tomorrow
+  if (deliveryTime <= new Date()) {
+    deliveryTime.setDate(deliveryTime.getDate() + 1);
+  }
+
+  const transformedData = {
+    paymentIntentId,
+    orderDetails: checkoutData.items.map((item) => ({
+      item: item.id || item._id, // Handle both id formats
+      name: item.name,
+      quantity: parseInt(item.quantity, 10),
+      price: Number(item.price || item.selectedPrice),
+      size: item.size || "regular",
+      modifiers: [],
+    })),
+    customer: {
+      name: checkoutData.customerInfo.name,
+      email: checkoutData.customerInfo.email.toLowerCase(),
+      phone: checkoutData.customerInfo.phone.replace(/\s+/g, ""),
+    },
+    address: {
+      street: checkoutData.customerInfo.address,
+      city: checkoutData.customerInfo.city,
+      postcode: checkoutData.customerInfo.postcode,
+    },
+    amount: {
+      subtotal: Number(checkoutData.subtotal),
+      deliveryFee: Number(checkoutData.deliveryFee),
+      total: Number(
+        (checkoutData.subtotal + checkoutData.deliveryFee).toFixed(2)
+      ),
+      discount: 0,
+    },
+    deliveryTime: {
+      requested: deliveryTime,
+    },
+    specialInstructions: checkoutData.customerInfo.specialInstructions || "",
+    paymentDetails: {
+      paymentIntentId,
+      method: "card",
+      status: "succeeded",
+    },
+    orderStatus: {
+      current: "pending",
+      history: [
+        {
+          status: "pending",
+          timestamp: new Date(),
+          note: "Order placed",
+        },
+      ],
+    },
+  };
+
+  console.log(
+    "Transformed order data:",
+    JSON.stringify(transformedData, null, 2)
+  );
+  return transformedData;
+};
+
+// Helper function to validate the transformed data
+const validateTransformedData = (data) => {
   const requiredFields = [
-    "name",
-    "email",
-    "phone",
+    "paymentIntentId",
+    "orderDetails",
+    "customer",
     "address",
-    "city",
-    "postcode",
+    "amount",
     "deliveryTime",
+    "paymentDetails",
+    "orderStatus",
   ];
 
-  const missingFields = requiredFields.filter((field) => !customerInfo[field]);
+  const missingFields = requiredFields.filter((field) => !data[field]);
   if (missingFields.length > 0) {
     throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
   }
 
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(customerInfo.email)) {
-    throw new Error("Invalid email format");
+  if (!Array.isArray(data.orderDetails) || data.orderDetails.length === 0) {
+    throw new Error("Order must contain at least one item");
   }
 
-  // UK postcode validation
-  const postcodeRegex = /^[A-Z]{1,2}[0-9][A-Z0-9]?\s?[0-9][A-Z]{2}$/i;
-  if (!postcodeRegex.test(customerInfo.postcode.trim())) {
-    throw new Error("Invalid UK postcode format");
-  }
-
-  // Phone validation
-  const phoneRegex = /^[\d\s-+()]{10,}$/;
-  if (!phoneRegex.test(customerInfo.phone.replace(/\s+/g, ""))) {
-    throw new Error("Invalid phone number format");
-  }
+  return true;
 };
 
 function CheckoutForm({ orderDetails, clientSecret }) {
@@ -100,6 +157,9 @@ function CheckoutForm({ orderDetails, clientSecret }) {
   const { cart, clearCart } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
+
+  // Calculate totals once and memoize the result
+  const totals = useMemo(() => validateCartAndCalculateTotals(cart), [cart]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -111,8 +171,6 @@ function CheckoutForm({ orderDetails, clientSecret }) {
     try {
       setIsProcessing(true);
       setError(null);
-
-      const totals = validateCartAndCalculateTotals(cart);
 
       // Submit the payment form
       const { error: submitError } = await elements.submit();
@@ -149,56 +207,20 @@ function CheckoutForm({ orderDetails, clientSecret }) {
 
       if (paymentIntent.status === "succeeded") {
         try {
-          const orderData = {
-            paymentIntentId: paymentIntent.id,
-            orderDetails: cart.map((item) => ({
-              item: item._id || item.id,
-              name: item.name,
-              quantity: parseInt(item.quantity, 10),
-              price: Number(item.selectedPrice || item.price),
-              size: item.size || "regular",
-              // Add modifiers if needed
-              modifiers: [],
-            })),
-            customer: {
-              name: orderDetails.customerInfo.name,
-              email: orderDetails.customerInfo.email.toLowerCase().trim(),
-              phone: orderDetails.customerInfo.phone,
-            },
-            address: {
-              street: orderDetails.customerInfo.address.trim(),
-              city: orderDetails.customerInfo.city.trim(),
-              postcode: orderDetails.customerInfo.postcode.toUpperCase().trim(),
-            },
-            amount: {
-              subtotal: totals.subtotal,
-              deliveryFee: totals.deliveryFee,
-              total: totals.total,
-              discount: 0,
-            },
-            paymentDetails: {
-              paymentIntentId: paymentIntent.id,
-              method: "card",
-              status: "succeeded",
-            },
-            deliveryTime: {
-              requested: new Date(orderDetails.customerInfo.deliveryTime),
-            },
-            specialInstructions:
-              orderDetails.customerInfo.specialInstructions || "",
-            orderStatus: {
-              current: "pending",
-              history: [
-                {
-                  status: "pending",
-                  timestamp: new Date(),
-                  note: "Order placed",
-                },
-              ],
-            },
-          };
+          console.log("Payment succeeded, creating order...");
+
+          // Transform and validate the order data
+          const orderData = transformOrderData(paymentIntent.id, orderDetails);
+          validateTransformedData(orderData);
+
+          console.log(
+            "Sending order data to API:",
+            JSON.stringify(orderData, null, 2)
+          );
 
           const { orderId } = await paymentAPI.createOrder(orderData);
+          console.log("Order created successfully:", orderId);
+
           clearCart();
 
           // Store order information
@@ -214,6 +236,7 @@ function CheckoutForm({ orderDetails, clientSecret }) {
             replace: true,
           });
         } catch (orderError) {
+          console.error("Order creation error:", orderError);
           throw new Error(
             `Payment successful but order creation failed: ${orderError.message}`
           );
@@ -226,8 +249,6 @@ function CheckoutForm({ orderDetails, clientSecret }) {
       setIsProcessing(false);
     }
   };
-
-  const totals = validateCartAndCalculateTotals(cart);
 
   return (
     <div className="payment-container">
@@ -253,7 +274,10 @@ function CheckoutForm({ orderDetails, clientSecret }) {
                 <div className="item-price">
                   <span className="quantity">x{item.quantity}</span>
                   <span className="price">
-                    £{(item.price * item.quantity).toFixed(2)}
+                    £
+                    {(
+                      (item.selectedPrice || item.price) * item.quantity
+                    ).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -376,7 +400,6 @@ function PaymentPage() {
           throw new Error("Your cart is empty");
         }
 
-        validateCustomerInfo(orderDetails.customerInfo);
         const { amountInCents } = validateCartAndCalculateTotals(cart);
 
         console.log("Creating payment intent:", {
@@ -407,7 +430,6 @@ function PaymentPage() {
       } catch (error) {
         console.error("Payment initialization failed:", error);
         setError(error.message);
-        // Add a slight delay before navigation
         setTimeout(() => {
           navigate("/checkout", {
             state: { error: error.message },
@@ -418,7 +440,6 @@ function PaymentPage() {
       }
     };
 
-    // Only initialize payment if we have order details and cart
     if (orderDetails && cart?.length) {
       initializePayment();
     } else {
@@ -426,7 +447,7 @@ function PaymentPage() {
       setError("Missing order details or empty cart");
       setTimeout(() => navigate("/checkout"), 100);
     }
-  }, [cart, orderDetails, navigate]); // Keep these dependencies
+  }, [cart, orderDetails, navigate]);
 
   // Loading state
   if (loading) {
