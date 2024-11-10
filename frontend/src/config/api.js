@@ -101,13 +101,13 @@ const validateOrderData = (orderData) => {
   return true;
 };
 
-// Axios Instance Configuration
 const api = axios.create({
   baseURL: API_CONFIG.baseURL,
   timeout: API_CONFIG.timeout,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
+    // Add any additional headers your API requires
   },
 });
 
@@ -352,10 +352,12 @@ export const getAPIConfig = () => ({
   currentTime: new Date().toISOString(),
 });
 
-export default {
+const apiService = {
   api,
   paymentAPI,
   checkAPIHealth,
   retryRequest,
   getAPIConfig,
 };
+
+export default apiService;

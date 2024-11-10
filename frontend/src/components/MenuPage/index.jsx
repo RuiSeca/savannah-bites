@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import "./styles.css";
 import { useCart } from "../../context/CartContext";
-import api from "../../config/api";
+import apiService from "../../config/api";
 
 // Import images
 import suyaSkewersImage from "../../images/suya-skewers.png";
@@ -114,31 +114,12 @@ function MenuPage() {
       setMenuLoading(true);
       setMenuError(false);
 
-      const apiUrl = `${process.env.REACT_APP_API_BASE_URL}/api/menu`;
-      console.log("Fetching menu from:", apiUrl);
+      const response = await apiService.api.get("/api/menu");
 
-      const response = await fetch(apiUrl);
-
-      console.log("Response type:", response.headers.get("content-type"));
-
-      if (!response.headers.get("content-type")?.includes("application/json")) {
-        const text = await response.text();
-        console.error("Received non-JSON response:", text);
-        throw new Error("Invalid response format");
-      }
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      if (Array.isArray(data.data)) {
-        setMenuItems(data.data);
+      if (Array.isArray(response?.data?.data)) {
+        setMenuItems(response.data.data);
       } else {
-        console.error("Unexpected data format:", data);
+        console.error("Unexpected data format:", response.data);
         throw new Error("Invalid data format");
       }
     } catch (error) {

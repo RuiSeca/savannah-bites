@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import {
   PaymentElement,
@@ -56,7 +56,6 @@ const validateCartAndCalculateTotals = (cart) => {
     amountInCents,
   };
 };
-
 const validateCustomerInfo = (customerInfo) => {
   if (!customerInfo) throw new Error("Customer information is required");
 
@@ -158,6 +157,8 @@ function CheckoutForm({ orderDetails, clientSecret }) {
               quantity: parseInt(item.quantity, 10),
               price: Number(item.selectedPrice || item.price),
               size: item.size || "regular",
+              // Add modifiers if needed
+              modifiers: [],
             })),
             customer: {
               name: orderDetails.customerInfo.name,
@@ -174,6 +175,11 @@ function CheckoutForm({ orderDetails, clientSecret }) {
               deliveryFee: totals.deliveryFee,
               total: totals.total,
               discount: 0,
+            },
+            paymentDetails: {
+              paymentIntentId: paymentIntent.id,
+              method: "card",
+              status: "succeeded",
             },
             deliveryTime: {
               requested: new Date(orderDetails.customerInfo.deliveryTime),
@@ -373,6 +379,11 @@ function PaymentPage() {
         validateCustomerInfo(orderDetails.customerInfo);
         const { amountInCents } = validateCartAndCalculateTotals(cart);
 
+        console.log("Creating payment intent:", {
+          amount: amountInCents,
+          customer: orderDetails.customerInfo.name,
+        });
+
         const response = await paymentAPI.createPaymentIntent({
           amount: amountInCents,
           currency: "gbp",
@@ -383,6 +394,11 @@ function PaymentPage() {
           },
         });
 
+        console.log("Payment intent response:", {
+          hasClientSecret: !!response.clientSecret,
+          hasId: !!response.id,
+        });
+
         if (!response.clientSecret) {
           throw new Error("Failed to initialize payment");
         }
@@ -391,17 +407,28 @@ function PaymentPage() {
       } catch (error) {
         console.error("Payment initialization failed:", error);
         setError(error.message);
+        // Add a slight delay before navigation
         setTimeout(() => {
-          navigate("/checkout");
+          navigate("/checkout", {
+            state: { error: error.message },
+          });
         }, 100);
       } finally {
         setLoading(false);
       }
     };
 
-    initializePayment();
-  }, [cart, orderDetails, navigate]);
+    // Only initialize payment if we have order details and cart
+    if (orderDetails && cart?.length) {
+      initializePayment();
+    } else {
+      setLoading(false);
+      setError("Missing order details or empty cart");
+      setTimeout(() => navigate("/checkout"), 100);
+    }
+  }, [cart, orderDetails, navigate]); // Keep these dependencies
 
+  // Loading state
   if (loading) {
     return (
       <div className="loading-container" role="status">
@@ -411,6 +438,7 @@ function PaymentPage() {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="error-container" role="alert">
@@ -423,6 +451,7 @@ function PaymentPage() {
     );
   }
 
+  // Success state
   return (
     <div className="payment-page">
       {clientSecret && (

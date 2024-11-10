@@ -86,49 +86,46 @@ const parseDeliveryTime = (timeString) => {
 // Create payment intent
 router.post("/create-payment-intent", async (req, res) => {
   try {
-    console.log("Received payment intent request:", req.body);
-    const { amount, currency = "gbp" } = req.body;
+    const { amount, currency = "gbp", metadata } = req.body;
 
-    // Validate amount
-    if (!amount || !Number.isInteger(amount) || amount <= 0) {
+    console.log("Creating payment intent:", {
+      amount,
+      currency,
+      metadata,
+    });
+
+    if (!amount || amount <= 0) {
       return res.status(400).json({
         status: "error",
-        error: "Invalid amount provided: amount must be a positive integer",
+        message: "Invalid amount provided",
       });
     }
 
-    // Create the payment intent with additional metadata
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency,
+      metadata: {
+        ...metadata,
+        timestamp: new Date().toISOString(),
+      },
       automatic_payment_methods: {
         enabled: true,
       },
-      metadata: {
-        integration_check: "accept_a_payment",
-      },
-      capture_method: "automatic",
-      confirm: false,
-      setup_future_usage: undefined,
     });
 
-    // Log the created payment intent
-    console.log("Created payment intent:", {
+    console.log("Payment intent created:", {
       id: paymentIntent.id,
-      amount: paymentIntent.amount,
-      status: paymentIntent.status,
+      clientSecret: paymentIntent.client_secret ? "present" : "missing",
     });
 
     res.json({
-      status: "success",
       clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
+      id: paymentIntent.id,
     });
   } catch (error) {
-    console.error("Payment intent creation failed:", error);
+    console.error("Payment intent creation error:", error);
     res.status(500).json({
       status: "error",
-      error: "Failed to create payment intent",
       message: error.message,
     });
   }
