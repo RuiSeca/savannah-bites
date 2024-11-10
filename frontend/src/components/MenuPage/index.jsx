@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import "./styles.css";
 import { useCart } from "../../context/CartContext";
 import apiService from "../../config/api";
+import MealDealsSection from "../MealDealsSection";
 
 // Import images
 import suyaSkewersImage from "../../images/suya-skewers.png";
@@ -98,6 +99,7 @@ function MenuPage() {
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [activeItem, setActiveItem] = useState(null);
   const { addToCart } = useCart();
+  const [selectedDeal, setSelectedDeal] = useState(null);
 
   // Sort menu items by category order
   const sortedMenuItems = useMemo(() => {
@@ -107,6 +109,12 @@ function MenuPage() {
       return orderA - orderB;
     });
   }, [menuItems]);
+
+  // Add this function to handle deal selection
+  const handleDealSelect = (deal) => {
+    setSelectedDeal(deal);
+    // You can show a modal here with deal details and required items
+  };
 
   // Fetch menu data function update
   const fetchMenu = useCallback(async () => {
@@ -213,6 +221,8 @@ function MenuPage() {
           </div>
         </header>
 
+        <MealDealsSection onDealSelect={handleDealSelect} />
+
         <div className="menu-categories">
           {sortedMenuItems.length > 0 ? (
             sortedMenuItems.map((category) => (
@@ -267,6 +277,61 @@ function MenuPage() {
             </p>
           )}
         </div>
+
+        {/* Add a new modal for deal details */}
+        {selectedDeal && (
+          <div className="modal-overlay" onClick={() => setSelectedDeal(null)}>
+            <div
+              className="deal-details-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                className="close-button"
+                onClick={() => setSelectedDeal(null)}
+                aria-label="Close deal details"
+              >
+                ×
+              </button>
+              <h2>{selectedDeal.name}</h2>
+              <p className="deal-description">{selectedDeal.description}</p>
+              <div className="deal-price">£{selectedDeal.price.toFixed(2)}</div>
+              <div className="deal-requirements">
+                <h3>Required Items:</h3>
+                <ul>
+                  {Object.entries(selectedDeal.requirements).map(
+                    ([category, req]) => (
+                      <li key={category}>
+                        {req.count}x {category}{" "}
+                        {req.size !== "any" ? `(${req.size})` : ""}
+                      </li>
+                    )
+                  )}
+                </ul>
+              </div>
+              {selectedDeal.timeRestrictions && (
+                <div className="deal-restrictions">
+                  <h3>Available Times:</h3>
+                  <p>{selectedDeal.timeRestrictions.days.join(", ")}</p>
+                  <p>
+                    {selectedDeal.timeRestrictions.startTime} -{" "}
+                    {selectedDeal.timeRestrictions.endTime}
+                  </p>
+                </div>
+              )}
+              <div className="deal-savings">{selectedDeal.savings}</div>
+              <button
+                className="start-deal-button"
+                onClick={() => {
+                  // Handle starting the deal order
+                  setSelectedDeal(null);
+                  // You can implement logic here to guide users to select required items
+                }}
+              >
+                Start Order
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Size Selection Modal */}
         {showSizeModal && activeItem && (
