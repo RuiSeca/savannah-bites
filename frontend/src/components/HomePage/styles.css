@@ -252,6 +252,102 @@ main {
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
 }
 
+/* Button container to manage spacing */
+.button-container {
+  display: flex;
+  gap: 2rem; /* Creates equal spacing between buttons */
+  justify-content: center; /* Centers the buttons horizontally */
+  margin-top: 2rem;
+  flex-wrap: wrap; /* Allows buttons to wrap if needed */
+}
+
+.btn-home-menu {
+  display: inline-flex; /* Changed to inline-flex for better alignment */
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease,
+    transform 0.1s ease;
+  font-weight: 600;
+  align-items: center; /* Vertically centers button content */
+  justify-content: center; /* Horizontally centers button content */
+}
+
+.btn-home-menu:hover {
+  background-color: var(--secondary-color);
+  transform: scale(1.05);
+}
+
+.btn-home-reservation {
+  display: inline-flex; /* Changed to inline-flex for better alignment */
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease,
+    transform 0.1s ease;
+  font-weight: 600;
+  align-items: center; /* Vertically centers button content */
+  justify-content: center; /* Horizontally centers button content */
+}
+
+.btn-home-reservation:hover {
+  background-color: var(--secondary-color);
+  transform: scale(1.05);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .button-container {
+    gap: 1rem; /* Slightly reduced gap for mobile */
+  }
+
+  .btn-home-menu,
+  .btn-home-reservation {
+    padding: 0.5rem 1rem; /* Slightly smaller padding on mobile if needed */
+    min-width: 120px; /* Ensures minimum button width */
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+  .button-container {
+    gap: 0.5rem; /* Further reduced gap for very small screens */
+  }
+
+  .btn-home-menu,
+  .btn-home-reservation {
+    font-size: 0.9rem; /* Slightly smaller font for very small screens */
+  }
+}
+
+.btn-home-order {
+  display: inline-flex; /* Changed to inline-flex for better alignment */
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition:
+    background-color 0.3s ease,
+    transform 0.1s ease;
+  font-weight: 600;
+  align-items: center; /* Vertically centers button content */
+}
+
+.btn-home-order:hover {
+  background-color: var(--secondary-color);
+  transform: scale(1.05);
+}
+
 @keyframes floatAnimation {
   0% {
     transform: translateY(0px);
