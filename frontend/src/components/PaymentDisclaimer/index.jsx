@@ -1,18 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./styles.css";
 
 const PaymentDisclaimer = () => {
-  const [showDisclaimer, setShowDisclaimer] = useState(false);
-
-  useEffect(() => {
-    const hasSeenDisclaimer = localStorage.getItem("hasSeenPaymentDisclaimer");
-    if (!hasSeenDisclaimer) {
-      setShowDisclaimer(true);
-    }
-  }, []);
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
 
   const handleClose = () => {
-    localStorage.setItem("hasSeenPaymentDisclaimer", "true");
     setShowDisclaimer(false);
   };
 
