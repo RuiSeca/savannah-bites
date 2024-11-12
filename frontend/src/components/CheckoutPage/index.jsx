@@ -406,7 +406,7 @@ function CheckoutPage() {
 
         {/* Delivery Details Form */}
         <form onSubmit={handleSubmit} className="delivery-form">
-          <h2>Delivery Details</h2>
+          <h2>Delivery Details (UK only)</h2>
 
           <div className="form-section">
             <h3>Contact Information</h3>
