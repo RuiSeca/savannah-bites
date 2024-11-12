@@ -450,3 +450,29 @@
     border: 2px solid ButtonText;
   }
 }
+
+.stripe-branding {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  color: #6b7c93;
+  font-size: 14px;
+}
+
+.stripe-logo {
+  height: 20px;
+  width: auto;
+}
+
+/* Dark mode support if needed */
+@media (prefers-color-scheme: dark) {
+  .stripe-branding {
+    color: #87909f;
+  }
+
+  .stripe-logo path {
+    fill: #87909f;
+  }
+}
