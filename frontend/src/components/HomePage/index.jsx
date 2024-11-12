@@ -79,12 +79,6 @@ function HomePage() {
                 with succulent grilled chicken.
               </p>
               <p className="price">£14.99</p>
-              <button
-                className="btn-home-order"
-                onClick={() => handleOrderClick("Jollof Rice Royale", "£14.99")}
-              >
-                Add to Order
-              </button>
             </div>
           </div>
 
@@ -97,14 +91,6 @@ function HomePage() {
                 for a burst of flavors.
               </p>
               <p className="price">£12.99</p>
-              <button
-                className="btn-home-order"
-                onClick={() =>
-                  handleOrderClick("Pap & Chakalaka Fusion", "£12.99")
-                }
-              >
-                Add to Order
-              </button>
             </div>
           </div>
 
@@ -117,14 +103,6 @@ function HomePage() {
                 with creamy egg custard.
               </p>
               <p className="price">£16.99</p>
-              <button
-                className="btn-home-order"
-                onClick={() =>
-                  handleOrderClick("Cape Bobotie Delight", "£16.99")
-                }
-              >
-                Add to Order
-              </button>
             </div>
           </div>
         </section>
