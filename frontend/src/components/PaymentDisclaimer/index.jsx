@@ -27,14 +27,12 @@ const PaymentDisclaimer = () => {
           </div>
           <p className="disclaimer-note">
             No real payments will be processed. This is for demonstration
-            purposes only. Please also notice that you will receive an email
-            confirmation of your order if you proceed with the payment so please
-            keep an eye on your inbox.
+            purposes only. Thank you for your understanding.
           </p>
           <p className="disclaimer-note-2">
-            Please also notice that you will receive an email confirmation of
-            your order, if you proceed with the payment, so please keep an eye
-            on your inbox!
+            Lastely, please also notice that you will receive an email
+            confirmation of your order, if you proceed with the payment, so
+            please keep an eye on your inbox!
           </p>
         </div>
         <button onClick={handleClose} className="disclaimer-button">
