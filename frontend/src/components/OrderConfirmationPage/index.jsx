@@ -119,7 +119,7 @@ const OrderConfirmationPage = () => {
       } finally {
         setTimeout(() => {
           setLoading(false);
-        }, 110000);
+        }, 2000);
       }
     };
 
