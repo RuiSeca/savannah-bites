@@ -73,7 +73,12 @@
 
 .disclaimer-note {
   font-size: 0.875rem;
-  color: #718096;
+  color: #4a5568;
+}
+
+.disclaimer-note-2 {
+  font-size: 0.875rem;
+  color: #e90404;
 }
 
 .disclaimer-button {
