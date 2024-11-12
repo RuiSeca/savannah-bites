@@ -31,7 +31,7 @@ const PaymentDisclaimer = () => {
             confirmation of your order if you proceed with the payment so please
             keep an eye on your inbox.
           </p>
-          <p className="disclaimer-note">
+          <p className="disclaimer-note-2">
             Please also notice that you will receive an email confirmation of
             your order, if you proceed with the payment so please keep an eye on
             your inbox!
