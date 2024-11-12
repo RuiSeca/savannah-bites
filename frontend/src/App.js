@@ -12,7 +12,7 @@ import ScrollToTopButton from "./components/ScrollToTopButton";
 
 import "./App.css";
 
-// Load Stripe public key from environment variable
+// Load Stripe
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 // Lazy load components
@@ -32,7 +32,7 @@ const ReservationConfirmationPage = lazy(
   () => import("./components/ReservationConfirmationPage")
 );
 
-// Enhanced loading spinner component
+// Single Loading Spinner
 const LoadingSpinner = () => (
   <div className="loading-container">
     <div className="loading-spinner">
@@ -52,64 +52,67 @@ function AppContent() {
     "/reservation-confirmation",
   ].includes(location.pathname);
 
+  // Simplified navigation handling
+  React.useEffect(() => {
+    const handleNavigation = () => {
+      // Only reload if this isn't the initial page load
+      if (performance.navigation.type !== performance.navigation.TYPE_RELOAD) {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    handleNavigation();
+  }, [location.pathname]);
+
   return (
     <div className="app">
-      {!isCheckoutOrPayment && (
-        <Suspense fallback={<LoadingSpinner />}>
-          <Navigation />
-        </Suspense>
-      )}
+      {!isCheckoutOrPayment && <Navigation />}
+
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/menu" element={<MenuPage />} />
+          <Route
+            path="/checkout"
+            element={
+              <div className="checkout-wrapper">
+                <CheckoutPage />
+              </div>
+            }
+          />
+          <Route
+            path="/payment"
+            element={
+              <div className="payment-wrapper">
+                <PaymentPage />
+              </div>
+            }
+          />
+          <Route
+            path="/reservation"
+            element={
+              <div className="reservation-wrapper">
+                <ReservationPage />
+              </div>
+            }
+          />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/confirmation" element={<OrderConfirmationPage />} />
+          <Route
+            path="/reservation-confirmation"
+            element={
+              <div className="reservation-wrapper">
+                <ReservationConfirmationPage />
+              </div>
+            }
+          />
+        </Routes>
+      </main>
 
       <ScrollToTopButton />
 
-      <main className="main-content">
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/menu" element={<MenuPage />} />
-            <Route
-              path="/checkout"
-              element={
-                <div className="checkout-wrapper">
-                  <CheckoutPage />
-                </div>
-              }
-            />
-            <Route
-              path="/payment"
-              element={
-                <div className="payment-wrapper">
-                  <PaymentPage />
-                </div>
-              }
-            />
-            <Route
-              path="/reservation"
-              element={
-                <div className="reservation-wrapper">
-                  <ReservationPage />
-                </div>
-              }
-            />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/confirmation" element={<OrderConfirmationPage />} />
-            <Route
-              path="/reservation-confirmation"
-              element={
-                <div className="reservation-wrapper">
-                  <ReservationConfirmationPage />
-                </div>
-              }
-            />
-          </Routes>
-        </Suspense>
-      </main>
-      {!isCheckoutOrPayment && !isReservationFlow && (
-        <Suspense fallback={<LoadingSpinner />}>
-          <FooterPage />
-        </Suspense>
-      )}
+      {!isCheckoutOrPayment && !isReservationFlow && <FooterPage />}
     </div>
   );
 }
@@ -117,13 +120,47 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <CartProvider>
-        <Elements stripe={stripePromise}>
-          <AppContent />
-        </Elements>
-      </CartProvider>
+      <ErrorBoundary>
+        <CartProvider>
+          <Elements stripe={stripePromise}>
+            <Suspense fallback={<LoadingSpinner />}>
+              <AppContent />
+            </Suspense>
+          </Elements>
+        </CartProvider>
+      </ErrorBoundary>
     </Router>
   );
+}
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error:", error);
+    console.error("Error Info:", errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-container">
+          <h1>Something went wrong.</h1>
+          <button onClick={() => window.location.reload()}>Reload Page</button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 export default App;

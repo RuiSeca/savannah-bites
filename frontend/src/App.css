@@ -149,61 +149,6 @@ body {
   box-shadow: var(--shadow-md);
 }
 
-/* ScrollToTop Button */
-.scroll-to-top-btn {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(100px);
-  transition: all 0.3s ease;
-  z-index: 9999;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.scroll-to-top-btn.visible {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
-.scroll-to-top-btn:hover {
-  background: var(--secondary-color);
-  transform: translateY(-2px);
-}
-
-.scroll-to-top-btn svg {
-  width: 24px;
-  height: 24px;
-  color: white;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .scroll-to-top-btn {
-    bottom: 20px;
-    right: 20px;
-    width: 40px;
-    height: 40px;
-  }
-
-  .scroll-to-top-btn {
-    width: 20px;
-    height: 20px;
-  }
-}
-
 /* Footer */
 .footer {
   flex-shrink: 0;

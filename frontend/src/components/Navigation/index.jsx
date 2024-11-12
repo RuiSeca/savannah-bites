@@ -1,35 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 import CookingPotBasket from "../CookingPotBasket";
 import "./styles.css";
 
 const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
 
-  // Reset scroll when location changes
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    setIsMobileMenuOpen(false);
-  }, [location]);
-
-  const handleCartClick = () => {
-    navigate("/checkout");
+  const handleNavigation = (path) => {
+    window.location.href = path;
   };
 
-  // Custom link component that scrolls to top
-  const ScrollToTopLink = ({ to, children, onClick }) => {
-    const handleClick = (e) => {
-      if (onClick) onClick(e);
-      window.scrollTo(0, 0);
-    };
-
-    return (
-      <Link to={to} onClick={handleClick}>
-        {children}
-      </Link>
-    );
+  const handleCartClick = () => {
+    handleNavigation("/checkout");
   };
 
   return (
@@ -37,19 +18,59 @@ const Navigation = () => {
       {/* Desktop Menu */}
       <ul className="desktop-menu">
         <li>
-          <ScrollToTopLink to="/">Home</ScrollToTopLink>
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              handleNavigation("/");
+            }}
+          >
+            Home
+          </a>
         </li>
         <li>
-          <ScrollToTopLink to="/menu">Menu</ScrollToTopLink>
+          <a
+            href="/menu"
+            onClick={(e) => {
+              e.preventDefault();
+              handleNavigation("/menu");
+            }}
+          >
+            Menu
+          </a>
         </li>
         <li>
-          <ScrollToTopLink to="/Reservation">Book A Table</ScrollToTopLink>
+          <a
+            href="/Reservation"
+            onClick={(e) => {
+              e.preventDefault();
+              handleNavigation("/Reservation");
+            }}
+          >
+            Book A Table
+          </a>
         </li>
         <li>
-          <ScrollToTopLink to="/about">About Us</ScrollToTopLink>
+          <a
+            href="/about"
+            onClick={(e) => {
+              e.preventDefault();
+              handleNavigation("/about");
+            }}
+          >
+            About Us
+          </a>
         </li>
         <li>
-          <ScrollToTopLink to="/contact">Contact</ScrollToTopLink>
+          <a
+            href="/contact"
+            onClick={(e) => {
+              e.preventDefault();
+              handleNavigation("/contact");
+            }}
+          >
+            Contact
+          </a>
         </li>
         <li className="cart-button-container">
           <CookingPotBasket onClick={handleCartClick} />
@@ -91,41 +112,64 @@ const Navigation = () => {
         </button>
         <ul className="mobile-menu">
           <li>
-            <ScrollToTopLink to="/" onClick={() => setIsMobileMenuOpen(false)}>
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavigation("/");
+                setIsMobileMenuOpen(false);
+              }}
+            >
               Home
-            </ScrollToTopLink>
+            </a>
           </li>
           <li>
-            <ScrollToTopLink
-              to="/menu"
-              onClick={() => setIsMobileMenuOpen(false)}
+            <a
+              href="/menu"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavigation("/menu");
+                setIsMobileMenuOpen(false);
+              }}
             >
               Menu
-            </ScrollToTopLink>
+            </a>
           </li>
           <li>
-            <ScrollToTopLink
-              to="/Reservation"
-              onClick={() => setIsMobileMenuOpen(false)}
+            <a
+              href="/Reservation"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavigation("/Reservation");
+                setIsMobileMenuOpen(false);
+              }}
             >
               Book A Table
-            </ScrollToTopLink>
+            </a>
           </li>
           <li>
-            <ScrollToTopLink
-              to="/about"
-              onClick={() => setIsMobileMenuOpen(false)}
+            <a
+              href="/about"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavigation("/about");
+                setIsMobileMenuOpen(false);
+              }}
             >
               About Us
-            </ScrollToTopLink>
+            </a>
           </li>
           <li>
-            <ScrollToTopLink
-              to="/contact"
-              onClick={() => setIsMobileMenuOpen(false)}
+            <a
+              href="/contact"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavigation("/contact");
+                setIsMobileMenuOpen(false);
+              }}
             >
               Contact
-            </ScrollToTopLink>
+            </a>
           </li>
         </ul>
       </div>

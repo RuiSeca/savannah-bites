@@ -1,25 +1,21 @@
 import React, { useState, useEffect } from "react";
 import "./styles.css";
 
-const ScrollToTop = () => {
+const ScrollToTopButton = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
-  // Handle scroll visibility
   useEffect(() => {
     let timeoutId;
 
     const handleScroll = () => {
-      // Show button when user scrolls down 100px
       const shouldBeVisible = window.scrollY > 100;
       setIsVisible(shouldBeVisible);
 
-      // Clear the previous timeout
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
 
-      // Set a new timeout to hide the button after 2 seconds of no scrolling
       if (shouldBeVisible && !isHovering) {
         timeoutId = setTimeout(() => {
           setIsVisible(false);
@@ -45,7 +41,7 @@ const ScrollToTop = () => {
 
   return (
     <button
-      className={`scroll-to-top ${isVisible ? "visible" : ""}`}
+      className={`scroll-to-top-btn ${isVisible ? "visible" : ""}`}
       onClick={scrollToTop}
       aria-label="Scroll to top"
       onMouseEnter={() => setIsHovering(true)}
@@ -66,4 +62,4 @@ const ScrollToTop = () => {
   );
 };
 
-export default ScrollToTop;
+export default ScrollToTopButton;
