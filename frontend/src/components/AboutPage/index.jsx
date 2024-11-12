@@ -29,7 +29,7 @@ const AboutPage = () => {
   return (
     <div className="about-page-wrapper">
       <div className="about-page">
-        <header className="header-gradient">
+        <header className="about-header">
           <div className="header-content">
             <h1>About Savannah Bites</h1>
             <p className="tagline">A Taste of African Culinary Heritage</p>

@@ -8,7 +8,7 @@ import {
 import { CartProvider } from "./context/CartContext";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import ScrollToTopButton from "./components/ScrollToTopButton";
+import ScrollToTop from "./components/ScrollToTop";
 
 import "./App.css";
 
@@ -52,11 +52,14 @@ function AppContent() {
     "/reservation-confirmation",
   ].includes(location.pathname);
 
-  // Simplified navigation handling
+  // Updated navigation handling using modern Web Performance API
   React.useEffect(() => {
     const handleNavigation = () => {
-      // Only reload if this isn't the initial page load
-      if (performance.navigation.type !== performance.navigation.TYPE_RELOAD) {
+      // Get the navigation entries
+      const entries = performance.getEntriesByType("navigation");
+
+      // Check if entries exist and if this isn't a page reload
+      if (entries.length > 0 && entries[0].type !== "reload") {
         window.scrollTo(0, 0);
       }
     };
@@ -110,7 +113,7 @@ function AppContent() {
         </Routes>
       </main>
 
-      <ScrollToTopButton />
+      <ScrollToTop />
 
       {!isCheckoutOrPayment && !isReservationFlow && <FooterPage />}
     </div>

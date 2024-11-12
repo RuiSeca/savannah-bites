@@ -49,7 +49,11 @@
 
 .header-content .tagline {
   font-size: 1.2rem;
-  opacity: 0.9;
+  margin-top: 0.5rem;
+  font-weight: 300;
+  color: white;
+  font-style: italic;
+  letter-spacing: 1px;
 }
 
 /* Main Content Layout */

@@ -11,6 +11,7 @@ import { useCart } from "../../context/CartContext";
 import ProgressSteps from "../ProgressSteps";
 import { paymentAPI } from "../../config/api";
 import "./styles.css";
+import PaymentDisclaimer from "../PaymentDisclaimer";
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
@@ -255,6 +256,9 @@ function CheckoutForm({ orderDetails, clientSecret }) {
       <ProgressSteps currentStep={2} />
 
       <div className="payment-header">
+        <button className="back-button" onClick={() => navigate(-1)}>
+          ← Back
+        </button>
         <h1>Secure Payment</h1>
 
         <div className="order-summary">
@@ -475,6 +479,7 @@ function PaymentPage() {
   // Success state
   return (
     <div className="payment-page">
+      <PaymentDisclaimer />
       {clientSecret && (
         <Elements
           stripe={stripePromise}

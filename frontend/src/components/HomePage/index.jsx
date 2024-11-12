@@ -5,7 +5,6 @@ import HomeFood from "../../images/HomePage.jpg";
 import JellofRice from "../../images/jollof-rice.jpg";
 import Bobotie from "../../images/bobotie.jpg";
 import PapChakalaka from "../../images/pap-chakalaka.jpg";
-import ScrollToTopButton from "../ScrollToTopButton";
 
 function HomePage() {
   const navigate = useNavigate();
@@ -25,7 +24,6 @@ function HomePage() {
 
   return (
     <div className="home-page">
-      <ScrollToTopButton />
       <header className="header">
         <div className="header-content">
           <h1>Savannah Bites</h1>
