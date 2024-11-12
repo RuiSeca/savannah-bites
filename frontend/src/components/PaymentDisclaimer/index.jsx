@@ -31,6 +31,11 @@ const PaymentDisclaimer = () => {
             confirmation of your order if you proceed with the payment so please
             keep an eye on your inbox.
           </p>
+          <p className="disclaimer-note">
+            Please also notice that you will receive an email confirmation of
+            your order, if you proceed with the payment so please keep an eye on
+            your inbox!
+          </p>
         </div>
         <button onClick={handleClose} className="disclaimer-button">
           I Understand
