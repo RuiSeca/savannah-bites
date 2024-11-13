@@ -17,11 +17,6 @@ function HomePage() {
     navigate("/reservation");
   };
 
-  const handleOrderClick = (dishName, price) => {
-    // You can implement order functionality here
-    console.log(`Ordered: ${dishName} - ${price}`);
-  };
-
   return (
     <div className="home-page">
       <header className="header">
