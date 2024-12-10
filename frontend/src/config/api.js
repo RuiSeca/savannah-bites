@@ -15,7 +15,7 @@ class APIError extends Error {
 // Environment and Configuration
 const API_CONFIG = {
   baseURL: process.env.REACT_APP_API_BASE_URL,
-  timeout: 45000,
+  timeout: 15000,
   retryAttempts: 3,
   retryDelay: 1000,
   environment: process.env.NODE_ENV,

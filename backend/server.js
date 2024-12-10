@@ -55,6 +55,11 @@ const CONFIG = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     apiVersion: "2023-10-16",
   },
+  keepAlive: {
+    url: process.env.KEEP_ALIVE_URL || "https://savannahbites.onrender.com",
+    interval: 14 * 60 * 1000, // 14 minutes in milliseconds
+    enabled: process.env.NODE_ENV === "production", // Only enable in production
+  },
 };
 
 // Initialize express app
@@ -452,17 +457,73 @@ async function connectToDatabase() {
   }
 }
 
+// Keep-Alive Service
+function setupKeepAlive() {
+  if (!CONFIG.keepAlive.enabled) {
+    console.log("Keep-alive service disabled");
+    return;
+  }
+
+  const https = require("https");
+
+  function keepAlive() {
+    const url = CONFIG.keepAlive.url;
+    console.log(`Pinging ${url} to keep server alive...`);
+
+    https
+      .get(url, (resp) => {
+        if (resp.statusCode === 200) {
+          console.log(`Keep-alive successful at: ${new Date().toISOString()}`);
+        } else {
+          console.log(`Keep-alive received status code: ${resp.statusCode}`);
+        }
+      })
+      .on("error", (err) => {
+        console.error("Keep-alive ping failed:", err.message);
+      });
+  }
+
+  // Initial ping on startup
+  keepAlive();
+
+  // Set up recurring pings
+  const interval = setInterval(keepAlive, CONFIG.keepAlive.interval);
+
+  // Clean up on server shutdown
+  process.on("SIGTERM", () => {
+    clearInterval(interval);
+    console.log("Keep-alive service stopped");
+  });
+
+  return interval;
+}
+
 // Server Startup
 async function startServer() {
   try {
     await connectToDatabase();
 
-    app.listen(CONFIG.port, () => {
+    const server = app.listen(CONFIG.port, () => {
       console.log(
         `Server running on port ${CONFIG.port} in ${CONFIG.environment} mode`
       );
       console.log(`CORS enabled for origins:`, CONFIG.cors.origins);
       console.log(`Webhook endpoint: ${process.env.WEBHOOK_URL || "/webhook"}`);
+    });
+
+    // Set up keep-alive service after server starts
+    setupKeepAlive();
+
+    // Handle graceful shutdown
+    process.on("SIGTERM", () => {
+      console.log("SIGTERM received. Shutting down gracefully...");
+      server.close(() => {
+        console.log("Server closed");
+        mongoose.connection.close(false, () => {
+          console.log("MongoDB connection closed");
+          process.exit(0);
+        });
+      });
     });
   } catch (error) {
     console.error("Server startup error:", error);
